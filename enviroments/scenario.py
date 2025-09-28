@@ -1,173 +1,160 @@
 # main.py
-import random
-import time
 import numpy as np
-from agent.pica_agent import Agent
+import math
+from typing import List
+
+# from agent.pica_agent import Agent # 使用您最终的Agent类
 # from agent.orca_agent import OrcaAgent as Agent
+from examples.pica_3d.v2.pica_agent import Agent
+from examples.pica_3d.v2 import config as cfg
 
-from simulator.pica_simulator import Simulator
 from utils.pica_structures import Vector3D
-import config as cfg
-import matplotlib.pyplot as plt
+# import enviroments.config as cfg
 
-def setup_scenario():
-    """Creates agents and their goals based on the configured scenario."""
-    agents = []
-    center = Vector3D(cfg.WORLD_SIZE[0] / 2, cfg.WORLD_SIZE[1] / 2, cfg.WORLD_SIZE[2] / 2)
-    
-    # --- SCENARIO 1: Crossroads (tests priority and inertia) ---
-    if cfg.SCENARIO == 'crossroads':
-        print("Setting up 'crossroads' scenario...")
-        num_heavy = cfg.NUM_AGENTS // 2
-        # num_agile = cfg.NUM_AGENTS - num_heavy
+def setup_crossing_scenario(num_agents: int) -> List[Agent]:
+    """
+    [核心异质性验证场景]
+    两组不同物理特性的无人机相互交叉。
+    - A组: 敏捷、低优先级 (从左到右)
+    - B组: 笨重、高优先级 (从下到上)
+    """
+    print("Setting up: Asymmetric Crossing Scenario")
+    agents: List[Agent] = []
+    center_x, center_y, z = cfg.WORLD_SIZE[0] / 2, cfg.WORLD_SIZE[1] / 2, cfg.WORLD_SIZE[2] / 2
+    spacing = 5
+    start_offset = (num_agents // 4) * spacing / 2
+
+    # A组: 敏捷侦察机 (从左到右)
+    for i in range(num_agents // 2):
+        start_pos = Vector3D(0, center_y - start_offset + i * spacing, z)
+        goal_pos = Vector3D(cfg.WORLD_SIZE[0], center_y - start_offset + i * spacing, z)
         
-        # Group A: Heavy, high-priority, moving along X-axis
-        heavy_inertia = np.diag([0.5, 5.0, 5.0]) # Hard to move sideways/up-down
-        for i in range(num_heavy):
-            offset = Vector3D(0, random.uniform(-5, 5), random.uniform(-5, 5))
-            start_pos = Vector3D(5, center.y, center.z) + offset
-            goal_pos = Vector3D(cfg.WORLD_SIZE[0] - 5, center.y, center.z) + offset
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, priority=2.0, inertia_matrix=heavy_inertia))
-            
-        # Group B: Agile, low-priority, moving along Y-axis ?? 
-        for i in range(num_heavy, cfg.NUM_AGENTS):
-            offset = Vector3D(random.uniform(-5, 5), 0, random.uniform(-5, 5))
-            start_pos = Vector3D(center.x, 5, center.z) + offset
-            goal_pos = Vector3D(center.x, cfg.WORLD_SIZE[1] - 5, center.z) + offset
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, priority=1.0))
-
-    # --- SCENARIO 2: Merge Flow (tests density and risk perception) ---
-    elif cfg.SCENARIO == 'merge_flow':
-        print("Setting up 'merge_flow' scenario...")
-        z_inertia = np.diag([3.0, 3.0, 0.5])
-        # Main flow: A dense group of low-priority agents
-        for i in range(cfg.NUM_AGENTS - 1):
-            offset = Vector3D(random.uniform(-10, 10), random.uniform(-2, 2), random.uniform(-2, 2))
-            start_pos = Vector3D(5, center.y, center.z) + offset
-            goal_pos = Vector3D(cfg.WORLD_SIZE[0] - 5, center.y, center.z) + offset
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=1.0))
-            
-        # Merging agent: A single high-priority agent
-        # start_pos = Vector3D(center.x - 10, cfg.WORLD_SIZE[1] - 10, center.z)
-        start_pos = Vector3D(5, center.y, center.z)
-        goal_pos = Vector3D(cfg.WORLD_SIZE[0] - 5, center.y, center.z)
-        agents.append(Agent(id=cfg.NUM_AGENTS - 1, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=3.0))
-
-    # --- SCENARIO 3: Hive Takeoff (tests dense Z-axis coordination) ---
-    elif cfg.SCENARIO == 'hive_takeoff':
-        print("Setting up 'hive_takeoff' scenario...")
-        platform_radius = 5.0
-        z_takeoff = 5.0
-        # Z-axis specialized inertia: easy to move up/down, hard to move sideways
-        z_inertia = np.diag([3.0, 3.0, 0.5])
+        # 敏捷: 惯性矩阵为单位矩阵
+        inertia_matrix = np.eye(3) * 1.0
+        # 低优先级
+        priority = 1.0
         
-        for i in range(cfg.NUM_AGENTS):
-            # Start on a tight platform on the ground
-            start_offset = Vector3D(random.uniform(-platform_radius, platform_radius),
-                                    random.uniform(-platform_radius, platform_radius),
-                                    0)
-            start_pos = center + start_offset
-            start_pos.z = z_takeoff
-            
-            # Goal at a high altitude and spread out
-            goal_offset = Vector3D(random.uniform(-15, 15), random.uniform(-15, 15), 0)
-            goal_pos = center + goal_offset
-            goal_pos.z = random.uniform(cfg.WORLD_SIZE[2] * 0.7, cfg.WORLD_SIZE[2] * 0.9)
-            
-            # Assign mixed priorities to see emergent sequencing
-            priority = 1.0 + (i % 3) # 1.0, 2.0, 3.0
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=priority))
-            #TODO：这里是没有惯性说明参数的
-            
-    # --- Baseline Scenarios ---
-    elif cfg.SCENARIO == 'antipodal_sphere':
-        print("Setting up 'antipodal_sphere' scenario...")
-        radius = min(cfg.WORLD_SIZE) * 0.5
-        z_inertia = np.diag([1.0, 1.0, 1.0])
-        
-        for i in range(cfg.NUM_AGENTS):
-            phi = random.uniform(0, 2 * math.pi)
-            costheta = random.uniform(-1, 1)
-            theta = math.acos(costheta)
-            
-            x = radius * math.sin(theta) * math.cos(phi)
-            y = radius * math.sin(theta) * math.sin(phi)
-            z = radius * math.cos(theta)
+        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia_matrix, priority=priority))
 
-            start_pos = center + Vector3D(x, y, z)
-            goal_pos = center - Vector3D(x, y, z)
-            
-            priority = 1.0 + (i % 3) * 0.5
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=priority))
+    # B组: 重型运输机 (从下到上)
+    for i in range(num_agents // 2):
+        start_pos = Vector3D(center_x - start_offset + i * spacing, 0, z)
+        goal_pos = Vector3D(center_x - start_offset + i * spacing, cfg.WORLD_SIZE[1], z)
 
-    # --- Baseline Hybrid Scenarios ---
-    elif cfg.SCENARIO == 'hybrid_sphere':
-        print("Setting up 'hive_takeoff' scenario...")
-        platform_radius = 5.0
-        z_takeoff = 5.0
-        # Z-axis specialized inertia: easy to move up/down, hard to move sideways
-        z_inertia = np.diag([3.0, 3.0, 0.5])
-        
-        for i in range(cfg.NUM_AGENTS):
-            # Start on a tight platform on the ground
-            start_offset = Vector3D(random.uniform(-platform_radius, platform_radius),
-                                    random.uniform(-platform_radius, platform_radius),
-                                    0)
-            start_pos = center + start_offset
-            start_pos.z = z_takeoff
-            
-            # Goal at a high altitude and spread out
-            goal_offset = Vector3D(random.uniform(-15, 15), random.uniform(-15, 15), 0)
-            goal_pos = center + goal_offset
-            goal_pos.z = random.uniform(cfg.WORLD_SIZE[2] * 0.7, cfg.WORLD_SIZE[2] * 0.9)
-            priority = 1.0
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=priority))            
-            '''
-            if i % 3 != 0:
-                agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=priority))
-            else:
-                from agent.orca_agent import OrcaAgent
-                agents.append(OrcaAgent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=priority))
-            '''
-            
-    
-    else: # Default to 'random' if scenario name is invalid
-        print("Setting up 'random' scenario...")
-        for i in range(cfg.NUM_AGENTS):
-            start_pos = Vector3D(random.uniform(0, cfg.WORLD_SIZE[0]),
-                                 random.uniform(0, cfg.WORLD_SIZE[1]),
-                                 random.uniform(0, cfg.WORLD_SIZE[2]))
-            goal_pos = Vector3D(random.uniform(0, cfg.WORLD_SIZE[0]),
-                                random.uniform(0, cfg.WORLD_SIZE[1]),
-                                random.uniform(0, cfg.WORLD_SIZE[2]))
-            agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=z_inertia, priority=1.0))
+        # 笨重: 惯性矩阵惩罚非前向运动
+        inertia_matrix = np.diag([1.0, 50.0, 50.0]) # 假设Y是其前进方向
+        # 高优先级
+        priority = 10.0
+
+        agents.append(Agent(id=i + num_agents // 2, pos=start_pos, goal=goal_pos, inertia_matrix=inertia_matrix, priority=priority))
+
     return agents
 
-if __name__ == "__main__":
-    import math
-    
-    print("Initializing 3D PICA Simulation...")
-    agents = setup_scenario()
-    simulator = Simulator(agents)
+def setup_circle_scenario_2d(num_agents: int) -> List[Agent]:
+    """
+    [经典基准场景]
+    所有智能体在一个2D圆环上，目标是其对跖点。
+    """
+    print("Setting up: 2D Circle (Antipodal) Scenario")
+    agents: List[Agent] = []
+    center_x, center_y, z = cfg.WORLD_SIZE[0] / 2, cfg.WORLD_SIZE[1] / 2, cfg.WORLD_SIZE[2] / 2
+    radius = min(center_x, center_y) * 0.8
 
-    start_time = time.time()
-    
-    # --- Main Simulation Loop ---
-    while simulator.time < cfg.SIMULATION_TIME:
-        print(f"Simulating... Time: {simulator.time:.2f}s", end='\r')
-        simulator.step()
+    for i in range(num_agents):
+        angle = 2 * math.pi * i / num_agents
+        start_pos = Vector3D(center_x + radius * math.cos(angle), 
+                             center_y + radius * math.sin(angle), 
+                             z)
+        goal_pos = Vector3D(center_x - radius * math.cos(angle), 
+                            center_y - radius * math.sin(angle), 
+                            z)
         
-        # Check for early exit condition
-        if simulator.all_agents_at_goal():
-            print("\nAll agents have reached their goals!")
-            break
+        # 在此场景中，我们可以混合不同类型的智能体来测试
+        if i % 2 == 0:
+            # 偶数ID: 敏捷型
+            inertia = np.eye(3) * 1.0
+            priority = 1.0
+        else:
+            # 奇数ID: 稍笨重型
+            inertia = np.diag([5.0, 5.0, 5.0])
+            priority = 5.0
 
-    end_time = time.time()
+        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia, priority=priority))
+        
+    return agents
+
+def setup_sphere_scenario_3d(num_agents: int) -> List[Agent]:
+    """
+    [3D扩展场景]
+    所有智能体在一个3D球面上，目标是其对跖点。
+    """
+    print("Setting up: 3D Sphere (Antipodal) Scenario")
+    agents: List[Agent] = []
+    center = Vector3D(cfg.WORLD_SIZE[0]/2, cfg.WORLD_SIZE[1]/2, cfg.WORLD_SIZE[2]/2)
+    radius = min(center.x, center.y, center.z) * 0.8
     
-    print(f"\nSimulation finished in {end_time - start_time:.2f} real-world seconds.")
-    print(f"Completed {simulator.time:.2f} simulation seconds.")
+    # 使用斐波那契晶格在球面上均匀分布点
+    points = []
+    phi = math.pi * (3. - math.sqrt(5.))  # 黄金角
+    for i in range(num_agents):
+        y = 1 - (i / float(num_agents - 1)) * 2  # y goes from 1 to -1
+        r = math.sqrt(1 - y * y)  # radius at y
+        theta = phi * i  # golden angle increment
+        x = math.cos(theta) * r
+        z = math.sin(theta) * r
+        points.append(Vector3D(x, y, z))
 
-    if cfg.VISUALIZE:
-        print("Closing visualization.")
-        plt.ioff()
-        plt.show()
+    for i in range(num_agents):
+        start_vec = points[i]
+        start_pos = center + start_vec * radius
+        goal_pos = center - start_vec * radius
+
+        # 随机分配异质性
+        inertia = np.diag(np.random.uniform(1, 10, 3))
+        priority = np.random.uniform(1, 10)
+        
+        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia, priority=priority))
+        
+    return agents
+
+def setup_ellipsoid_scenario_3d(num_agents: int) -> List[Agent]:
+    """
+    [更复杂的3D场景]
+    智能体在一个椭球表面上，目标是对跖点，强制在不同维度上产生不同密度的交互。
+    """
+    print("Setting up: 3D Ellipsoid (Antipodal) Scenario")
+    agents: List[Agent] = []
+    center = Vector3D(cfg.WORLD_SIZE[0]/2, cfg.WORLD_SIZE[1]/2, cfg.WORLD_SIZE[2]/2)
+    # 一个在X轴上被拉长的椭球
+    radii = Vector3D(center.x * 0.9, center.y * 0.5, center.z * 0.7)
+
+    # 同样使用斐波那契晶格，但之后根据椭球半径进行缩放
+    points = []
+    phi = math.pi * (3. - math.sqrt(5.))
+    for i in range(num_agents):
+        y = 1 - (i / float(num_agents - 1)) * 2
+        r = math.sqrt(1 - y * y)
+        theta = phi * i
+        x = math.cos(theta) * r
+        z = math.sin(theta) * r
+        points.append(Vector3D(x, y, z))
+
+    for i in range(num_agents):
+        start_vec = points[i]
+        start_pos = center + Vector3D(start_vec.x * radii.x, start_vec.y * radii.y, start_vec.z * radii.z)
+        goal_pos = center - Vector3D(start_vec.x * radii.x, start_vec.y * radii.y, start_vec.z * radii.z)
+        
+        inertia = np.diag(np.random.uniform(1, 10, 3))
+        priority = np.random.uniform(1, 10)
+
+        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia, priority=priority))
+        
+    return agents
+
+# 场景生成函数的字典
+scenario_factory = {
+    'CROSSING': setup_crossing_scenario,
+    'CIRCLE_2D': setup_circle_scenario_2d,
+    'SPHERE_3D': setup_sphere_scenario_3d,
+    'ELLIPSOID_3D': setup_ellipsoid_scenario_3d
+}

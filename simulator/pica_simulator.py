@@ -138,15 +138,34 @@ class Simulator:
         self.ax.set_xlabel("X (m)")
         self.ax.set_ylabel("Y (m)")
         self.ax.set_zlabel("Z (m)")
+
+        #TODO: some changes we need same color for one priorty
         
-        default_colors = ['b', 'g', 'c', 'm', 'y', 'k'] * (cfg.NUM_AGENTS // 6 + 1)
-        
+        # default_colors = ['b', 'g', 'c', 'm', 'y', 'k'] * (cfg.NUM_AGENTS // 6 + 1)
+        # 定义基础颜色列表（可根据需要扩展）
+        base_colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', 'purple', 'pink', 'brown']
+        # 用于存储 (优先级, 惯性特征) 到颜色的映射
+        color_map = {}
+        # 用于跟踪已使用的颜色索引
+        color_index = 0
         for i, agent in enumerate(self.agents):
-            agent_color = 'r' if agent.is_colliding else default_colors[i]
+            
+            # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）
+            # 因为惯性矩阵主要通过对角线元素体现不同方向的惯性
+            inertia_feature = tuple(agent.inertia_matrix.diagonal())
+            # 组合优先级和惯性特征作为唯一标识
+            agent_key = (agent.priority, inertia_feature)
+
+            # 如果是新的组合，分配一个新颜色
+            if agent_key not in color_map:
+                color_map[agent_key] = base_colors[color_index % len(base_colors)]
+                color_index += 1
+            
+            agent_color = 'r' if agent.is_colliding else color_map[agent_key]
             marker_size = 150 if agent.is_colliding else 100
 
             self.ax.scatter(agent.pos.x, agent.pos.y, agent.pos.z, color=agent_color, marker='o', s=marker_size)
-            self.ax.scatter(agent.goal.x, agent.goal.y, agent.goal.z, color=default_colors[i], marker='x', s=150)
+            self.ax.scatter(agent.goal.x, agent.goal.y, agent.goal.z, color=color_map[agent_key], marker='x', s=150)
             self.ax.quiver(agent.pos.x, agent.pos.y, agent.pos.z, 
                            agent.vel.x, agent.vel.y, agent.vel.z, 
                            length=1.5, color=agent_color)
