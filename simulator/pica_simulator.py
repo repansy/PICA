@@ -139,8 +139,6 @@ class Simulator:
         self.ax.set_ylabel("Y (m)")
         self.ax.set_zlabel("Z (m)")
 
-        #TODO: some changes we need same color for one priorty
-        
         # default_colors = ['b', 'g', 'c', 'm', 'y', 'k'] * (cfg.NUM_AGENTS // 6 + 1)
         # 定义基础颜色列表（可根据需要扩展）
         base_colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', 'purple', 'pink', 'brown']

@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import examples.pica_3d.v2.config as cfg
 from scipy.spatial import distance, cKDTree
 from scipy.stats import variation
 
@@ -182,9 +183,8 @@ class AgentMotionAnalyzer:
             "total_time": self.num_timesteps
         }
 
-# 使用示例
-if __name__ == "__main__":
-    # 获取当前脚本所在目录
+def simgle_test():
+# 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     print(current_dir)
     target_path = os.path.join(current_dir, '..', 'results', 'ORCA', 'c-20-trajectory-3d'+'.csv')
@@ -212,3 +212,58 @@ if __name__ == "__main__":
     print(f"- 平均邻近距离: {report['spatial_behavior']['avg_nn_distance']:.4f}")
     print(f"- 空间分布均匀性: {report['spatial_behavior']['dispersion']:.4f}")
     print(f"- 平均拥堵时间: {report['spatial_behavior']['avg_congestion_duration_seconds']:.2f}秒")
+
+
+def batch_analyze_scenarios(input_dir, output_summary):
+    """
+    批量分析所有场景的CSV文件并生成汇总结果
+    input_dir: 存放场景CSV的目录
+    output_summary: 汇总结果输出路径
+    """
+    # 获取所有场景CSV文件
+    csv_files = [f for f in os.listdir(input_dir) if f.endswith("_trajectory.csv")]
+    summary_data = []
+    
+    for file in csv_files:
+        # 提取场景名（从文件名中解析，如"CROSSING_trajectory.csv" -> "CROSSING"）
+        scenario = file.replace("_trajectory.csv", "")
+        file_path = os.path.join(input_dir, file)
+        print(f"\n===== 分析场景: {scenario} =====")
+        
+        # 假设所有场景的智能体数量相同，若不同需根据场景调整
+        num_agents = cfg.NUM_AGENTS  # 或从文件/场景配置中动态获取
+        analyzer = AgentMotionAnalyzer(file_path, num_agents)
+        report = analyzer.generate_report()
+        
+        # 解析报告数据为一行记录
+        row = {
+            "scenario": scenario,
+            "total_time": report["total_time"],
+            # 安全性能指标
+            "total_collisions": report["safety_performance"]["total_collisions"],
+            "max_collision_duration": report["safety_performance"]["max_collision_duration"],
+            # 运动效率指标
+            "avg_movement_time": report["motion_efficiency"]["avg_movement_time"],
+            "avg_jerk": report["motion_efficiency"]["avg_jerk"],
+            "avg_path_ratio": report["motion_efficiency"]["avg_path_ratio"],
+            # 空间行为指标
+            "avg_nn_distance": report["spatial_behavior"]["avg_nn_distance"],
+            "dispersion": report["spatial_behavior"]["dispersion"],
+            "avg_congestion_duration_seconds": report["spatial_behavior"]["avg_congestion_duration_seconds"]
+        }
+        summary_data.append(row)
+    
+    # 写入汇总CSV
+    df = pd.DataFrame(summary_data)
+    df.to_csv(output_summary, index=False)
+    print(f"\n汇总结果已保存至: {output_summary}")
+
+
+# 批量运行入口
+if __name__ == "__main__":
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # 场景CSV存放目录（与batch_run.py的输出目录对应）
+    input_dir = os.path.join(current_dir, "..", "results", "scenarios")
+    # 汇总结果输出路径
+    output_summary = os.path.join(current_dir, "..", "results", "summary_results.csv")
+    batch_analyze_scenarios(input_dir, output_summary)

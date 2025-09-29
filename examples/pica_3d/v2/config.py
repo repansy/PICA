@@ -4,7 +4,8 @@ import numpy as np
 # --- Simulation Scenario ---
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
-SCENARIO =  'CIRCLE_2D'# 'ELLIPSOID_3D'# 'CIRCLE_2D'# 'SPHERE_3D'# 'hybrid_sphere'
+SCENARIO =  'SPHERE_DISCRETE'
+RESULT_DIR = 'F:\CodeRepo\PICA\results\pica_batch\1'
 
 # --- Simulation Parameters ---
 NUM_AGENTS = 20

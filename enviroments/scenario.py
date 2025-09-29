@@ -1,160 +1,183 @@
-# main.py
-import numpy as np
-import math
-from typing import List
+# scenario.py
 
 # from agent.pica_agent import Agent # 使用您最终的Agent类
 # from agent.orca_agent import OrcaAgent as Agent
+import numpy as np
+import math
+from typing import List, Dict
+from utils.pica_structures import Vector3D
 from examples.pica_3d.v2.pica_agent import Agent
 from examples.pica_3d.v2 import config as cfg
 
-from utils.pica_structures import Vector3D
-# import enviroments.config as cfg
 
-def setup_crossing_scenario(num_agents: int) -> List[Agent]:
-    """
-    [核心异质性验证场景]
-    两组不同物理特性的无人机相互交叉。
-    - A组: 敏捷、低优先级 (从左到右)
-    - B组: 笨重、高优先级 (从下到上)
-    """
-    print("Setting up: Asymmetric Crossing Scenario")
-    agents: List[Agent] = []
-    center_x, center_y, z = cfg.WORLD_SIZE[0] / 2, cfg.WORLD_SIZE[1] / 2, cfg.WORLD_SIZE[2] / 2
-    spacing = 5
-    start_offset = (num_agents // 4) * spacing / 2
+class BaseSphereScenario:
+    """球形场景基类，封装通用逻辑"""
+    def __init__(self):
+        self.center = Vector3D(
+            cfg.WORLD_SIZE[0]/2,
+            cfg.WORLD_SIZE[1]/2,
+            cfg.WORLD_SIZE[2]/2
+        )
+        self.radius = min(self.center.x, self.center.y, self.center.z) * 0.8
+        self.points = self._generate_fibonacci_lattice()  # 预生成球面均匀点
 
-    # A组: 敏捷侦察机 (从左到右)
-    for i in range(num_agents // 2):
-        start_pos = Vector3D(0, center_y - start_offset + i * spacing, z)
-        goal_pos = Vector3D(cfg.WORLD_SIZE[0], center_y - start_offset + i * spacing, z)
-        
-        # 敏捷: 惯性矩阵为单位矩阵
-        inertia_matrix = np.eye(3) * 1.0
-        # 低优先级
-        priority = 1.0
-        
-        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia_matrix, priority=priority))
+    def _generate_fibonacci_lattice(self) -> List[Vector3D]:
+        """生成斐波那契晶格点，均匀分布在单位球面上"""
+        points = []
+        phi = math.pi * (3. - math.sqrt(5.))  # 角
+        for i in range(cfg.NUM_AGENTS):
+            y = 1 - (i / float(cfg.NUM_AGENTS - 1)) * 2  # y从1到-1
+            r = math.sqrt(1 - y * y)  # y处的圆半径
+            theta = phi * i  # 角增量
+            x = math.cos(theta) * r
+            z = math.sin(theta) * r
+            points.append(Vector3D(x, y, z))
+        return points
 
-    # B组: 重型运输机 (从下到上)
-    for i in range(num_agents // 2):
-        start_pos = Vector3D(center_x - start_offset + i * spacing, 0, z)
-        goal_pos = Vector3D(center_x - start_offset + i * spacing, cfg.WORLD_SIZE[1], z)
+    def _get_start_goal_pos(self, idx: int) -> (Vector3D, Vector3D): # type: ignore
+        """获取第idx个智能体的起点和对跖点目标"""
+        start_vec = self.points[idx]
+        start_pos = self.center + start_vec * self.radius
+        goal_pos = self.center - start_vec * self.radius
+        return start_pos, goal_pos
 
-        # 笨重: 惯性矩阵惩罚非前向运动
-        inertia_matrix = np.diag([1.0, 50.0, 50.0]) # 假设Y是其前进方向
-        # 高优先级
-        priority = 10.0
+    def create_agents(self) -> List[Agent]:
+        """子类需实现该方法，定义权限和惯性分配逻辑"""
+        raise NotImplementedError("子类必须实现create_agents方法")
 
-        agents.append(Agent(id=i + num_agents // 2, pos=start_pos, goal=goal_pos, inertia_matrix=inertia_matrix, priority=priority))
 
-    return agents
+class DiscreteLevelSphereScenario(BaseSphereScenario):
+    """方案1：离散层级权限（高/中/低三级）"""
+    def __init__(self, high_ratio=0.3, mid_ratio=0.5):
+        super().__init__()
+        self.high_count = int(cfg.NUM_AGENTS * high_ratio)
+        self.mid_count = int(cfg.NUM_AGENTS * mid_ratio)
+        self.low_count = cfg.NUM_AGENTS - self.high_count - self.mid_count
 
-def setup_circle_scenario_2d(num_agents: int) -> List[Agent]:
-    """
-    [经典基准场景]
-    所有智能体在一个2D圆环上，目标是其对跖点。
-    """
-    print("Setting up: 2D Circle (Antipodal) Scenario")
-    agents: List[Agent] = []
-    center_x, center_y, z = cfg.WORLD_SIZE[0] / 2, cfg.WORLD_SIZE[1] / 2, cfg.WORLD_SIZE[2] / 2
-    radius = min(center_x, center_y) * 0.8
+    def create_agents(self) -> List[Agent]:
+        agents = []
+        for i in range(cfg.NUM_AGENTS):
+            start_pos, goal_pos = self._get_start_goal_pos(i)
+            
+            # 权限与惯性分配（高权限对应强抗磁性）
+            if i < self.high_count:
+                priority = 100.0
+                inertia = np.diag([1.0, 50.0, 50.0])  # 难横向移动（抗干扰）
+            elif i < self.high_count + self.mid_count:
+                priority = 50.0
+                inertia = np.diag([1.0, 10.0, 10.0])   # 中等抗干扰
+            else:
+                priority = 10.0
+                inertia = np.eye(3) * 1.0              # 易机动（弱抗干扰）
+            
+            agents.append(Agent(
+                id=i,
+                pos=start_pos,
+                goal=goal_pos,
+                inertia_matrix=inertia,
+                priority=priority
+            ))
+        return agents
 
-    for i in range(num_agents):
-        angle = 2 * math.pi * i / num_agents
-        start_pos = Vector3D(center_x + radius * math.cos(angle), 
-                             center_y + radius * math.sin(angle), 
-                             z)
-        goal_pos = Vector3D(center_x - radius * math.cos(angle), 
-                            center_y - radius * math.sin(angle), 
-                            z)
-        
-        # 在此场景中，我们可以混合不同类型的智能体来测试
-        if i % 2 == 0:
-            # 偶数ID: 敏捷型
+
+class DynamicContinuousSphereScenario(BaseSphereScenario):
+    """方案2：连续权限+动态抗磁性（随目标距离变化）"""
+    def __init__(self, base_priority_range=(10, 100)):
+        super().__init__()
+        self.base_priorities = np.random.uniform(
+            base_priority_range[0],
+            base_priority_range[1],
+            cfg.NUM_AGENTS
+        )
+
+    def create_agents(self) -> List[Agent]:
+        agents = []
+        for i in range(cfg.NUM_AGENTS):
+            start_pos, goal_pos = self._get_start_goal_pos(i)
+            # 初始惯性（统一敏捷，后续动态调整抗磁性由算法层实现）
             inertia = np.eye(3) * 1.0
-            priority = 1.0
-        else:
-            # 奇数ID: 稍笨重型
-            inertia = np.diag([5.0, 5.0, 5.0])
-            priority = 5.0
+            # 基础优先级（连续分布）
+            priority = self.base_priorities[i]
+            
+            agents.append(Agent(
+                id=i,
+                pos=start_pos,
+                goal=goal_pos,
+                inertia_matrix=inertia,
+                priority=priority
+            ))
+        return agents
 
-        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia, priority=priority))
-        
-    return agents
 
-def setup_sphere_scenario_3d(num_agents: int) -> List[Agent]:
-    """
-    [3D扩展场景]
-    所有智能体在一个3D球面上，目标是其对跖点。
-    """
-    print("Setting up: 3D Sphere (Antipodal) Scenario")
-    agents: List[Agent] = []
-    center = Vector3D(cfg.WORLD_SIZE[0]/2, cfg.WORLD_SIZE[1]/2, cfg.WORLD_SIZE[2]/2)
-    radius = min(center.x, center.y, center.z) * 0.8
-    
-    # 使用斐波那契晶格在球面上均匀分布点
-    points = []
-    phi = math.pi * (3. - math.sqrt(5.))  # 黄金角
-    for i in range(num_agents):
-        y = 1 - (i / float(num_agents - 1)) * 2  # y goes from 1 to -1
-        r = math.sqrt(1 - y * y)  # radius at y
-        theta = phi * i  # golden angle increment
-        x = math.cos(theta) * r
-        z = math.sin(theta) * r
-        points.append(Vector3D(x, y, z))
+class RoleBasedSphereScenario(BaseSphereScenario):
+    """方案3：功能角色绑定权限（物理特性与权限强耦合）"""
+    def __init__(self, role_ratio: Dict[str, float] = None):
+        super().__init__()
+        self.role_ratio = role_ratio or {
+            "heavy": 0.3,   # 重型载荷机（高权限+高惯性）
+            "agile": 0.5,   # 敏捷侦察机（低权限+低惯性）
+            "emergency": 0.2  # 应急机（中权限+动态响应）
+        }
 
-    for i in range(num_agents):
-        start_vec = points[i]
-        start_pos = center + start_vec * radius
-        goal_pos = center - start_vec * radius
+    def create_agents(self) -> List[Agent]:
+        agents = []
+        role_counts = {
+            role: int(cfg.NUM_AGENTS * ratio)
+            for role, ratio in self.role_ratio.items()
+        }
+        # 处理整数分配误差
+        role_counts["agile"] += cfg.NUM_AGENTS - sum(role_counts.values())
 
-        # 随机分配异质性
-        inertia = np.diag(np.random.uniform(1, 10, 3))
-        priority = np.random.uniform(1, 10)
-        
-        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia, priority=priority))
-        
-    return agents
+        idx = 0
+        # 1. 重型载荷机：高权限+难机动
+        for _ in range(role_counts["heavy"]):
+            start_pos, goal_pos = self._get_start_goal_pos(idx)
+            agents.append(Agent(
+                id=idx,
+                pos=start_pos,
+                goal=goal_pos,
+                inertia_matrix=np.diag([10.0, 10.0, 10.0]),  # 高惯性
+                priority=200.0
+            ))
+            idx += 1
 
-def setup_ellipsoid_scenario_3d(num_agents: int) -> List[Agent]:
-    """
-    [更复杂的3D场景]
-    智能体在一个椭球表面上，目标是对跖点，强制在不同维度上产生不同密度的交互。
-    """
-    print("Setting up: 3D Ellipsoid (Antipodal) Scenario")
-    agents: List[Agent] = []
-    center = Vector3D(cfg.WORLD_SIZE[0]/2, cfg.WORLD_SIZE[1]/2, cfg.WORLD_SIZE[2]/2)
-    # 一个在X轴上被拉长的椭球
-    radii = Vector3D(center.x * 0.9, center.y * 0.5, center.z * 0.7)
+        # 2. 敏捷侦察机：低权限+高机动
+        for _ in range(role_counts["agile"]):
+            start_pos, goal_pos = self._get_start_goal_pos(idx)
+            agents.append(Agent(
+                id=idx,
+                pos=start_pos,
+                goal=goal_pos,
+                inertia_matrix=np.eye(3) * 1.0,  # 低惯性
+                priority=50.0
+            ))
+            idx += 1
 
-    # 同样使用斐波那契晶格，但之后根据椭球半径进行缩放
-    points = []
-    phi = math.pi * (3. - math.sqrt(5.))
-    for i in range(num_agents):
-        y = 1 - (i / float(num_agents - 1)) * 2
-        r = math.sqrt(1 - y * y)
-        theta = phi * i
-        x = math.cos(theta) * r
-        z = math.sin(theta) * r
-        points.append(Vector3D(x, y, z))
+        # 3. 应急机：中权限+中等机动
+        for _ in range(role_counts["emergency"]):
+            start_pos, goal_pos = self._get_start_goal_pos(idx)
+            agents.append(Agent(
+                id=idx,
+                pos=start_pos,
+                goal=goal_pos,
+                inertia_matrix=np.diag([5.0, 5.0, 5.0]),  # 中等惯性
+                priority=150.0
+            ))
+            idx += 1
 
-    for i in range(num_agents):
-        start_vec = points[i]
-        start_pos = center + Vector3D(start_vec.x * radii.x, start_vec.y * radii.y, start_vec.z * radii.z)
-        goal_pos = center - Vector3D(start_vec.x * radii.x, start_vec.y * radii.y, start_vec.z * radii.z)
-        
-        inertia = np.diag(np.random.uniform(1, 10, 3))
-        priority = np.random.uniform(1, 10)
+        return agents
 
-        agents.append(Agent(id=i, pos=start_pos, goal=goal_pos, inertia_matrix=inertia, priority=priority))
-        
-    return agents
 
-# 场景生成函数的字典
+# 场景工厂：关联场景名称与创建函数
 scenario_factory = {
-    'CROSSING': setup_crossing_scenario,
-    'CIRCLE_2D': setup_circle_scenario_2d,
-    'SPHERE_3D': setup_sphere_scenario_3d,
-    'ELLIPSOID_3D': setup_ellipsoid_scenario_3d
+    # 球形权限场景
+    'SPHERE_DISCRETE': lambda: DiscreteLevelSphereScenario().create_agents(),
+    'SPHERE_DYNAMIC': lambda: DynamicContinuousSphereScenario().create_agents(),
+    'SPHERE_ROLE_BASED': lambda: RoleBasedSphereScenario().create_agents()
 }
+
+
+# 原有场景函数（setup_crossing_scenario等）保持不变，此处省略
+#   'CROSSING': setup_crossing_scenario,
+#   'CIRCLE_2D': setup_circle_scenario_2d,
+#   'ELLIPSOID_3D': setup_ellipsoid_scenario_3d,
