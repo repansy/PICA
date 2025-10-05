@@ -52,7 +52,7 @@ def batch_run_scenarios():
         # 设置带场景名的CSV输出路径
         cfg.TRAJECTORY_FILE = os.path.join(output_dir, f"{scenario}_trajectory.csv")
         # 初始化场景智能体
-        agents = scenario_factory[scenario](cfg.NUM_AGENTS)
+        agents = scenario_factory[scenario]()
         # 运行仿真
         sim = Simulator(agents)
         while sim.time < cfg.SIMULATION_TIME:

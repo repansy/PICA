@@ -4,11 +4,11 @@ import numpy as np
 # --- Simulation Scenario ---
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
-SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\pica_batch\\1'
+SCENARIO_2D =  'DISK_ANTIPODAL'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\pica_batch\\2'
 
 # --- Simulation Parameters ---
-NUM_AGENTS = 20
+NUM_AGENTS = 8
 TIMESTEP = 0.1  # seconds
 SIMULATION_TIME = 300  # seconds
 WORLD_SIZE = (50, 50, 50) # meters (x, y, z)
@@ -34,7 +34,7 @@ PICA_BETA_DAMPING = 0.25
 # 用于浮点数比较和数值计算的微小量，保证稳定性
 PICA_EPSILON = 1e-5
 # 规避时的时间视界(tau)。值越大，规避动作越平滑、越有预见性。原1.0s太短，易导致急促反应。
-TTC_HORIZON = 3.0 # seconds 
+TTC_HORIZON = 2.0 # seconds 
 
 # --- 风险评估与混合模型参数 ---
 # 风险评分中距离和TTC的权重。这些是绝对权重，无需归一化。
@@ -61,4 +61,4 @@ TRAJECTORY_FILE = "results/c-20-trajectory.csv"
 
 
 # --- (已废弃) ---
-# UNCERTAINTY_BUFFER = 0.15 # 已被更先进的概率不确定性模型取代
+# UNCERTAINTY_BUFFER = 0.15 # 已被更先进的概率不确定性模型取代,对吗

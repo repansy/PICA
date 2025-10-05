@@ -1,12 +1,11 @@
 import os
 import numpy as np
 import pandas as pd
-import examples.pica_3d.v2.config as cfg
 from scipy.spatial import distance, cKDTree
 from scipy.stats import variation
 
 # 参数配置
-# 时间间隔0.125
+# 时间间隔0.1
 COLLISION_DISTANCE = 1.0      # 碰撞距离阈值 2.0*2
 CONGESTION_DISTANCE = 15.0
 CONGESTION_DENSITY = 0.005      # 拥堵密度阈值 0.5
@@ -15,11 +14,15 @@ JERK_THRESHOLD = 0.1          # 加速度变化阈值
 CONGESTION_DURATION_THRESHOLD = 5  # 最小拥堵持续时间
 
 class AgentMotionAnalyzer:
-    def __init__(self, file_path, num_agents, dt=0.125):
+    def __init__(self, file_path, dt=0.1):
         self.df = pd.read_csv(file_path)
         self.num_timesteps = len(self.df)
-        self.num_agents = num_agents
         self.dt = dt
+        # 读取 总列数除以3即可
+        self.num_agents = int(len(self.df.columns)/3)
+        # 校验列数是否为3的倍数（确保数据格式正确）
+        if len(self.df.columns) % 3 != 0:
+            raise ValueError(f"CSV文件列数({len(self.df.columns)})不是3的倍数，数据格式错误")
         self.positions = self._load_positions()
         
     def _load_positions(self):
@@ -186,11 +189,11 @@ class AgentMotionAnalyzer:
 def simgle_test():
 # 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    print(current_dir)
+    # print(current_dir)
     target_path = os.path.join(current_dir, '..', 'results', 'ORCA', 'c-20-trajectory-3d'+'.csv')
-    
     # agent_positions_0814  stl-traj-s traj-ca-s-1 trajectories
     # 812  86 30
+    
     analyzer = AgentMotionAnalyzer(target_path, 20) 
     
     report = analyzer.generate_report()
@@ -231,8 +234,7 @@ def batch_analyze_scenarios(input_dir, output_summary):
         print(f"\n===== 分析场景: {scenario} =====")
         
         # 假设所有场景的智能体数量相同，若不同需根据场景调整
-        num_agents = cfg.NUM_AGENTS  # 或从文件/场景配置中动态获取
-        analyzer = AgentMotionAnalyzer(file_path, num_agents)
+        analyzer = AgentMotionAnalyzer(file_path)
         report = analyzer.generate_report()
         
         # 解析报告数据为一行记录
@@ -263,7 +265,8 @@ def batch_analyze_scenarios(input_dir, output_summary):
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 场景CSV存放目录（与batch_run.py的输出目录对应）
-    input_dir = os.path.join(current_dir, "..", "results", "scenarios")
+    # SPHERE_ROLE_BASED # SPHERE_DYNAMIC # SPHERE_DYNAMIC
+    input_dir = os.path.join(current_dir, "..", "results", "pica_batch\\1\\scenarios")
     # 汇总结果输出路径
     output_summary = os.path.join(current_dir, "..", "results", "summary_results.csv")
     batch_analyze_scenarios(input_dir, output_summary)
