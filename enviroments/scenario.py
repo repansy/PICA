@@ -24,11 +24,11 @@ class BaseSphereScenario:
     def _generate_fibonacci_lattice(self) -> List[Vector3D]:
         """生成斐波那契晶格点，均匀分布在单位球面上"""
         points = []
-        phi = math.pi * (3. - math.sqrt(5.))  # 角
+        phi = math.pi * (3. - math.sqrt(5.))  # 黄金角
         for i in range(cfg.NUM_AGENTS):
             y = 1 - (i / float(cfg.NUM_AGENTS - 1)) * 2  # y从1到-1
             r = math.sqrt(1 - y * y)  # y处的圆半径
-            theta = phi * i  # 角增量
+            theta = phi * i  # 黄金角增量
             x = math.cos(theta) * r
             z = math.sin(theta) * r
             points.append(Vector3D(x, y, z))
@@ -81,7 +81,7 @@ class DiscreteLevelSphereScenario(BaseSphereScenario):
 
 
 class DynamicContinuousSphereScenario(BaseSphereScenario):
-    """方案2：连续权限+动态抗磁性（随目标距离变化）"""
+    """方案2：连续权限"""
     def __init__(self, base_priority_range=(10, 100)):
         super().__init__()
         self.base_priorities = np.random.uniform(
@@ -94,7 +94,7 @@ class DynamicContinuousSphereScenario(BaseSphereScenario):
         agents = []
         for i in range(cfg.NUM_AGENTS):
             start_pos, goal_pos = self._get_start_goal_pos(i)
-            # 初始惯性（统一敏捷，后续动态调整抗磁性由算法层实现）
+            # 初始惯性（统一敏捷）
             inertia = np.eye(3) * 1.0
             # 基础优先级（连续分布）
             priority = self.base_priorities[i]

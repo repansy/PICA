@@ -13,7 +13,7 @@ pica_agent.py
 4. 最终安全网：使用保守的ORCA规则作为后备保障
 
 """
-
+import random
 import math
 import numpy as np
 from typing import List, Dict, Optional
@@ -413,8 +413,10 @@ class Agent:
             Vector3D: 可能扰动后的速度
         """
         if self.mu_vel.norm_sq() > 0.01 and neighbors:
-            # 转动小角度
+            # 转动小角度，随机转动
+            # perturb_angle = 0.015 * (random.randint(-180, 180))
             perturb_angle = (self.id % 20 - 10) * 0.015
+            # perturb_angle = 0
             c, s = math.cos(perturb_angle), math.sin(perturb_angle)
             px = v_pref.x * c - v_pref.y * s
             py = v_pref.x * s + v_pref.y * c
@@ -486,6 +488,11 @@ class Agent:
         
         # BUG FIX 1: The application of the evasion vector 'u' must be additive.
         # A negative sign here inverts the evasion logic, causing weak or incorrect avoidance.
+        
+        # u_np = u.to_numpy()                  # 转换为列向量
+        # M_u_np = self.inertia_matrix @ u_np  # M*u的矩阵运算
+        # u = Vector3D.from_numpy(M_u_np)  # 转换回向量对象
+
         plane_point = vel_i + u * alpha
         offset = plane_point.dot(normal)
         
@@ -558,3 +565,4 @@ class Agent:
         ttc = vel_dot_pos / rel_vel_sq
         # 综合风险 = 距离风险 + 碰撞时间风险（越短风险越高）
         return cfg.RISK_W_DIST / dist + cfg.RISK_W_TTC / (ttc + 0.1)
+    

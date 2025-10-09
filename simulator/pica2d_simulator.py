@@ -35,7 +35,7 @@ class Simulator:
         self.csv_file = csv.writer(self.csv_file_handle)
         header = []
         for i in range(len(self.agents)):
-            header.extend([f'Agent{i}_x', f'Agent{i}_y'])
+            header.extend([f'Agent{i}_x', f'Agent{i}_y', f'Agent{i}_z'])
         self.csv_file.writerow(header)
 
     def _write_positions_to_csv(self):
@@ -44,7 +44,7 @@ class Simulator:
             return
         row = []
         for agent in self.agents:
-            row.extend([agent.pos.x, agent.pos.y])
+            row.extend([agent.pos.x, agent.pos.y, 0])
         self.csv_file.writerow(row)
 
     def step(self):

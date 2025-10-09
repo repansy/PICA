@@ -64,4 +64,7 @@ def batch_run_scenarios():
 
 
 if __name__ == "__main__":
-    batch_run_scenarios()
+    
+    main()
+    
+    # atch_run_scenarios()

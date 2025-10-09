@@ -8,7 +8,11 @@ class Vector3D:
         self.x = x
         self.y = y
         self.z = z
-
+    
+    @classmethod
+    def from_numpy(cls, np_array):
+        return Vector3D(np_array[0],np_array[1],np_array[2])
+    
     def __add__(self, other):
         return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
 
@@ -61,12 +65,7 @@ class Vector3D:
     def to_numpy(self):
         """Converts the vector to a NumPy array for matrix operations."""
         return np.array([self.x, self.y, self.z])
-    
-    def from_numpy(self, np_array):
-        self.x = np_array[0]
-        self.y = np_array[1]
-        self.z = np_array[2]
-        return self
+
 
 class SlowBrainPolicy:
     """

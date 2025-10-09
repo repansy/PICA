@@ -5,7 +5,11 @@ import numpy as np
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\pica_batch\\1'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\pica_batch\\2'
+# 是否记录轨迹到CSV文件
+RECORD_TRAJECTORY = True
+# CSV文件保存路径
+TRAJECTORY_FILE = "results/c-20-trajectory.csv"
 
 # --- Simulation Parameters ---
 NUM_AGENTS = 20
@@ -17,7 +21,6 @@ WORLD_SIZE = (50, 50, 50) # meters (x, y, z)
 AGENT_RADIUS = 0.5  # meters
 MAX_SPEED = 2.0     # meters/second
 ACCELERATION_MAX = 2.0
-DEFAULT_INERTIA_MATRIX = np.diag([3.0, 3.0, 0.5])
 
 # --- [新] 概率不确定性建模 (Probabilistic Uncertainty Modeling) ---
 # 该模块取代了原有的 UNCERTAINTY_BUFFER，提供了更动态、更真实的建模方式
@@ -54,10 +57,6 @@ DENSITY_BETA_SMOOTHING = 0.7
 VISUALIZE = True
 # 每隔N个时间步更新一次图像，以加速仿真
 PLOT_FREQUENCY = 5
-# 是否记录轨迹到CSV文件
-RECORD_TRAJECTORY = True
-# CSV文件保存路径
-TRAJECTORY_FILE = "results/c-20-trajectory.csv"
 
 
 # --- (已废弃) ---
