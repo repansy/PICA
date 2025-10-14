@@ -266,7 +266,7 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 场景CSV存放目录（与batch_run.py的输出目录对应）
     # SPHERE_ROLE_BASED # SPHERE_DYNAMIC # SPHERE_DYNAMIC
-    input_dir = os.path.join(current_dir, "..", "results", "pica_batch\\1\\scenarios")
+    input_dir = os.path.join(current_dir, "..", "results", "batch\\2\\orca_scenarios")
     # 汇总结果输出路径
-    output_summary = os.path.join(current_dir, "..", "results", "summary_results.csv")
+    output_summary = os.path.join(current_dir, "..", "results\\batch\\2", "summary_results2.csv")
     batch_analyze_scenarios(input_dir, output_summary)

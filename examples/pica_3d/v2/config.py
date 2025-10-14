@@ -5,11 +5,16 @@ import numpy as np
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\pica_batch\\2'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\2'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
 TRAJECTORY_FILE = "results/c-20-trajectory.csv"
+
+# --- 仿真与可视化 ---
+VISUALIZE = True
+# 每隔N个时间步更新一次图像，以加速仿真
+PLOT_FREQUENCY = 5
 
 # --- Simulation Parameters ---
 NUM_AGENTS = 20
@@ -52,12 +57,6 @@ RISK_THRESHOLD_HIGH = 20.0 # 高于此风险，完全使用解析法
 DENSITY_SIGMA = 5.0 
 # 密度值的平滑因子，防止因邻居瞬时移动造成密度剧烈波动
 DENSITY_BETA_SMOOTHING = 0.7 
-
-# --- 仿真与可视化 ---
-VISUALIZE = True
-# 每隔N个时间步更新一次图像，以加速仿真
-PLOT_FREQUENCY = 5
-
 
 # --- (已废弃) ---
 # UNCERTAINTY_BUFFER = 0.15 # 已被更先进的概率不确定性模型取代

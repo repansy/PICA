@@ -1,5 +1,4 @@
 # main.py
-
 # import enviroments.config as cfg
 from examples.pica_3d.v2 import config as cfg
 from simulator.pica_simulator import Simulator
@@ -65,6 +64,6 @@ def batch_run_scenarios():
 
 if __name__ == "__main__":
     
-    main()
+    # main()
     
-    # atch_run_scenarios()
+    batch_run_scenarios()

@@ -139,6 +139,9 @@ class Simulator:
         self.ax.set_ylabel("Y (m)")
         self.ax.set_zlabel("Z (m)")
 
+        
+        
+        
         # default_colors = ['b', 'g', 'c', 'm', 'y', 'k'] * (cfg.NUM_AGENTS // 6 + 1)
         # 定义基础颜色列表（可根据需要扩展）
         base_colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', 'purple', 'pink', 'brown']
@@ -147,17 +150,23 @@ class Simulator:
         # 用于跟踪已使用的颜色索引
         color_index = 0
         for i, agent in enumerate(self.agents):
-            
-            # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）
-            # 因为惯性矩阵主要通过对角线元素体现不同方向的惯性
-            inertia_feature = tuple(agent.inertia_matrix.diagonal())
-            # 组合优先级和惯性特征作为唯一标识
-            agent_key = (agent.priority, inertia_feature)
+            if hasattr(agent, 'inertia_matrix'):
+                # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）,惯性矩阵主要通过对角线元素体现不同方向的惯性
+                inertia_feature = tuple(agent.inertia_matrix.diagonal())
+                # 组合优先级和惯性特征作为唯一标识
+                agent_key = (agent.priority, inertia_feature)
+            else:
+                # 对于无 inertia_matrix 的 OrcaAgent，使用固定标识
+                agent_key = ("orca",)  # 用元组确保可哈希
 
             # 如果是新的组合，分配一个新颜色
             if agent_key not in color_map:
-                color_map[agent_key] = base_colors[color_index % len(base_colors)]
-                color_index += 1
+                if agent_key == ("orca",):
+                    # OrcaAgent 固定使用灰色
+                    color_map[agent_key] = 'gray'
+                else:
+                    color_map[agent_key] = base_colors[color_index % len(base_colors)]
+                    color_index += 1
             
             agent_color = 'r' if agent.is_colliding else color_map[agent_key]
             marker_size = 150 if agent.is_colliding else 100
