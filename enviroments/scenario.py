@@ -1,7 +1,5 @@
 # scenario.py
 
-# from agent.pica_agent import Agent # 使用您最终的Agent类
-# from agent.orca_agent import OrcaAgent as Agent
 import numpy as np
 import math
 from typing import List, Dict

@@ -117,9 +117,9 @@ class OrcaAgent:
         
         # 如果 w 指向远离智能体的方向，且其投影长度的平方大于 w 本身的长度，
         # 意味着 w 在圆锥之外，因此 rel_vel 安全。
-        if dot_product_w_pos < 0 and dot_product_w_pos**2 > w_norm_sq * dist_sq:
-            # rel_vel 在圆锥之外，且正在远离，绝对安全
-            return None
+        cross_sq = w_norm_sq * dist_sq - dot_product_w_pos**2
+        if cross_sq > combined_radius_sq * w_norm_sq:
+            return None  # 在圆锥外，安全
 
         # --- 步骤 5: 根据所在区域计算修正向量 u ---
         # 如果程序运行到这里，说明 rel_vel 处于 TVO 的顶盖或侧面区域内。

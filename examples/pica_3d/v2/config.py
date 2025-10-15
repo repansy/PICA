@@ -5,11 +5,11 @@ import numpy as np
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\2'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\4'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
-TRAJECTORY_FILE = "results/c-20-trajectory.csv"
+TRAJECTORY_FILE = "results/2-trajectory.csv"
 
 # --- 仿真与可视化 ---
 VISUALIZE = True
