@@ -135,7 +135,7 @@ def read_and_sample_data(file_path, max_samples=100):
     # 获取总时间步数和Agent数量
     total_timesteps = len(df)
     agents = (len(df.columns)) // 3  # 每3列代表一个Agent的x,y,z坐标
-    
+
     print(f"数据包含 {total_timesteps} 个时间步和 {agents} 个Agent")
     
     # 计算采样间隔
@@ -271,9 +271,9 @@ def main():
     # 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     print(current_dir)
-    file_path = os.path.join(current_dir, '..', 'results', 'batch', '3', 'orca_plane_scenarios', '4_agents_xy_M_trajectory'+'.csv')
+    file_path = os.path.join(current_dir, '..', 'results', 'batch', '4', 'orca_plane_scenarios\\plane_scenarios', '2_agents_xy_M_trajectory'+'.csv')
     # file_path = os.path.join(current_dir, '..', 'results', 'batch', '2', 'pica_scenarios', 'SPHERE_DISCRETE_trajectory'+'.csv')
-    max_samples = 10  # 最大采样点数，可以根据需要调整
+    max_samples = 60  # 最大采样点数，可以根据需要调整
     
     positions = read_and_sample_data(file_path, max_samples)
     

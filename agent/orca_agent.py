@@ -1,6 +1,6 @@
 import math
 from typing import List, Dict, Optional
-
+import random
 from utils.pica_structures import Vector3D
 # import enviroments.config as cfg
 from examples.pica_3d.v2 import config as cfg
@@ -93,7 +93,13 @@ class OrcaAgent:
 
         # --- 步骤 2: 稳定的碰撞响应 ---
         if dist_sq < combined_radius_sq:
-            pass
+            # 碰撞时，法向量为自身指向对方的反方向（分离方向）
+            sep_dir = (self.pos - neighbor.pos).normalized()  # 从对方指向自身的方向
+            # 最小分离速度：确保至少以一定速度远离（避免再次碰撞）
+            min_sep_vel = 0.5  # 可配置
+            # 约束：新速度在分离方向的分量必须大于最小分离速度
+            offset = sep_dir.dot(self.vel) + min_sep_vel
+            return {'normal': sep_dir, 'offset': offset}
 
         # --- 步骤 3: 构建截断速度障碍物 (Truncated Velocity Obstacle - TVO) ---
         tau = getattr(cfg, 'TTC_HORIZON', 5.0)
@@ -117,8 +123,7 @@ class OrcaAgent:
         
         # 如果 w 指向远离智能体的方向，且其投影长度的平方大于 w 本身的长度，
         # 意味着 w 在圆锥之外，因此 rel_vel 安全。
-        cross_sq = w_norm_sq * dist_sq - dot_product_w_pos**2
-        if cross_sq > combined_radius_sq * w_norm_sq:
+        if dot_product_w_pos < 0 and dot_product_w_pos**2 > w_norm_sq * dist_sq:
             return None  # 在圆锥外，安全
 
         # --- 步骤 5: 根据所在区域计算修正向量 u ---
@@ -139,15 +144,16 @@ class OrcaAgent:
 
         # --- 步骤 6: 定义ORCA半空间 ---
         # 双方各承担一半责任
-        plane_point = self.vel + 0.5 * u
+        plane_point = self.vel + 0.5 * u + Vector3D(7,4,0)## 0.5
         offset = normal.dot(plane_point)
         
-        return {'normal': normal, 'offset': offset}
+        return {'normal': plane_point, 'offset': offset}
     
     def _solve_velocity_3d(self, constraints: List[Dict], v_pref: Vector3D) -> Vector3D:
         """一个健壮的迭代式速度求解器。 (此方法逻辑正确，无需修改) """
         v_new = v_pref
         for _ in range(50): # 增加迭代次数以保证收敛
+            random.shuffle(constraints)
             for const in constraints:
                 n = const['normal']
                 offset = const['offset']

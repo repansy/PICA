@@ -2,8 +2,8 @@ import numpy as np
 import math
 from typing import List, Tuple
 from utils.pica_structures import Vector3D
-from examples.pica_3d.v2.pica_agent import Agent
-# from agent.orca_agent import OrcaAgent as Agent
+# from examples.pica_3d.v2.pica_agent import Agent
+from agent.orca_agent import OrcaAgent as Agent
 from examples.pica_3d.v2 import config as cfg
 
 
