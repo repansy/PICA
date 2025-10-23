@@ -4,7 +4,7 @@ import numpy as np
 
 class Vector3D:
     """A complete 3D vector class with standard operations."""
-    def __init__(self, x, y, z):
+    def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
         self.x = x
         self.y = y
         self.z = z
@@ -65,6 +65,18 @@ class Vector3D:
     def to_numpy(self):
         """Converts the vector to a NumPy array for matrix operations."""
         return np.array([self.x, self.y, self.z])
+
+
+# --- 数据结构 (Plane 和 Line) ---
+class Plane:
+    def __init__(self, normal: Vector3D = Vector3D(), point: Vector3D = Vector3D()):
+        self.normal = normal
+        self.point = point
+
+class Line:
+    def __init__(self, point: Vector3D = Vector3D(), direction: Vector3D = Vector3D()):
+        self.point = point
+        self.direction = direction
 
 
 class SlowBrainPolicy:

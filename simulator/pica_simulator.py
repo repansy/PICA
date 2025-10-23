@@ -70,16 +70,28 @@ class Simulator:
         
     def step(self):
         """Advances the simulation by one timestep."""
-        
-        # 1. Compute all new velocities first.
-        new_velocities = {}
-        for agent in self.agents:
-            v_new = agent.compute_new_velocity(self.agents, self.dt)
-            new_velocities[agent.id] = v_new
+        if hasattr(self.agents[0], 'inertia_matrix'):
+            # 1. Compute all new velocities first.
+            new_velocities = {}
+            for agent in self.agents:
+                v_new = agent.compute_new_velocity(self.agents, self.dt)
+                new_velocities[agent.id] = v_new
+                
+            # 2. Update all agents' positions simultaneously.
+            for agent in self.agents:
+                agent.update(new_velocities[agent.id], self.dt)
+        else:
+            # 1. Compute all new velocities first.
+            for agent in self.agents:
+                agent.compute_neighbors(self.agents)
+                agent.compute_preferred_velocity()
+
+            for agent in self.agents:
+                agent.compute_new_velocity(self.dt)
             
-        # 2. Update all agents' positions simultaneously.
-        for agent in self.agents:
-            agent.update(new_velocities[agent.id], self.dt)
+            # 2. Update all agents' positions simultaneously.
+            for agent in self.agents:
+                agent.update(self.dt)
             
         # 3. Check for collisions AFTER moving.
         self._check_for_collisions()
@@ -139,9 +151,6 @@ class Simulator:
         self.ax.set_ylabel("Y (m)")
         self.ax.set_zlabel("Z (m)")
 
-        
-        
-        
         # default_colors = ['b', 'g', 'c', 'm', 'y', 'k'] * (cfg.NUM_AGENTS // 6 + 1)
         # 定义基础颜色列表（可根据需要扩展）
         base_colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', 'purple', 'pink', 'brown']

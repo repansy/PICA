@@ -5,11 +5,11 @@ import numpy as np
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\4'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\1'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
-TRAJECTORY_FILE = "results/2-trajectory.csv"
+TRAJECTORY_FILE = "results/test-trajectory.csv"
 
 # --- 仿真与可视化 ---
 VISUALIZE = True
@@ -25,6 +25,7 @@ WORLD_SIZE = (50, 50, 50) # meters (x, y, z)
 # --- Agent Physical Properties ---
 AGENT_RADIUS = 0.5  # meters
 MAX_SPEED = 2.0     # meters/second
+RVO3D_EPSILON = 0.00001 
 ACCELERATION_MAX = 2.0
 
 # --- [新] 概率不确定性建模 (Probabilistic Uncertainty Modeling) ---

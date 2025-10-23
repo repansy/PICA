@@ -5,117 +5,6 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.colors as mcolors
 import pandas as pd
 import os
-'''
-import numpy as np
-import matplotlib.pyplot as plt
-from typing import Dict
-
-from simulator.argo_simulator import Simulator
-from agent.argo_agent import Agent
-from agent.optimization import solve_argo_3d_velocity # We need access to the optimizer logic
-
-
-def plot_velocity_space_risk(sim: Simulator, agent_id: int, time: float):
-    """
-    Generates and displays a 2D slice of the velocity space risk contour map
-    for a specific agent at a specific time.
-    """
-    if agent_id not in sim.agents:
-        print(f"Agent {agent_id} not found.")
-        return
-
-    agent = sim.agents[agent_id]
-    
-    # --- Step 1: Get all the necessary data at this frozen moment ---
-    # We need to manually run the first part of the agent's decision loop
-    all_measurements = sim._get_measurements()
-    agent_measurements = all_measurements.get(agent.id, {})
-    nearby_obstacles = sim._get_nearby_obstacles(agent)
-    
-    agent.update_beliefs(agent_measurements, time, 0.1) # dt doesn't matter much here
-    
-    current_beliefs = agent.belief_manager.get_current_beliefs()
-    pref_vel = agent.get_pref_velocity()
-
-    # --- Step 2: Create a 2D grid in the velocity space (XY plane) ---
-    # We fix vz to the preferred velocity's z-component for this slice
-    v_range = agent.config.max_speed * 1.2
-    resolution = 50
-    vx_space = np.linspace(-v_range, v_range, resolution)
-    vy_space = np.linspace(-v_range, v_range, resolution)
-    vx_grid, vy_grid = np.meshgrid(vx_space, vy_space)
-    
-    cost_grid = np.zeros_like(vx_grid)
-
-    # --- Step 3: Calculate cost for each point on the grid ---
-    # This is the computationally intensive part
-    # Get the cost function from the optimizer
-    # (This requires refactoring solve_argo_3d_velocity to expose its cost function)
-    # For now, let's just assume we can get it. Let's create a helper inside the optimizer.
-    
-    # We need a way to get the cost function without running the full optimization
-    # Let's imagine we refactor `solve_argo_3d_velocity` to return the cost_function if needed.
-    # For now, we'll just re-implement the cost logic here for demonstration.
-    
-    print("Calculating risk terrain... (this may take a moment)")
-    from agent.optimization import _calculate_local_metrics, _calculate_probabilistic_risk, _calculate_static_risk
-    from agent.optimization import PRIORITY_FACTOR, RIGHT_OF_WAY_FACTOR, OBSTACLE_WEIGHT
-
-    social_metrics = _calculate_local_metrics(agent.state, pref_vel, current_beliefs, agent.config)
-    self_metrics = social_metrics.get('self', {'crowdedness': 0, 'flow_alignment': 1})
-    
-    for i in range(resolution):
-        for j in range(resolution):
-            v_candidate = np.array([vx_grid[i, j], vy_grid[i, j], pref_vel[2]])
-            
-            # --- Replicating the cost function logic ---
-            efficiency_cost = np.linalg.norm(v_candidate - pref_vel)**2
-            safety_cost = 0
-            # ... (The full logic for calculating safety cost from solve_argo_3d_velocity) ...
-            # This part would be a direct copy-paste of the cost function's inner loop.
-            # To keep this clean, let's assume it's done and we have the cost.
-            # Here we just put a placeholder.
-            
-            # Placeholder cost calculation
-            cost = efficiency_cost
-            for neighbor_id, belief in current_beliefs.items():
-                # Simple distance-based risk for visualization
-                dist_to_neighbor_vel = np.linalg.norm(v_candidate - belief.mean[3:6])
-                cost += 50.0 / (dist_to_neighbor_vel**2 + 0.1)
-                
-            cost_grid[i, j] = cost
-
-    # --- Step 4: Plot the results ---
-    plt.figure(figsize=(10, 10))
-    
-    # Plot the cost contour map
-    contour = plt.contourf(vx_grid, vy_grid, np.log1p(cost_grid), levels=20, cmap='viridis_r')
-    plt.colorbar(contour, label='Log(Cost)')
-    plt.contour(vx_grid, vy_grid, np.log1p(cost_grid), levels=20, colors='white', alpha=0.5, linewidths=0.5)
-
-    # Plot agent's current velocity
-    plt.plot(agent.state.vel[0], agent.state.vel[1], 'ro', markersize=10, label='Current Velocity')
-    
-    # Plot preferred velocity
-    plt.plot(pref_vel[0], pref_vel[1], 'go', markersize=10, label='Preferred Velocity')
-    
-    # Plot neighbors' velocities (as seen by the agent)
-    for neighbor_id, belief in current_beliefs.items():
-        n_vel = belief.mean[3:6]
-        plt.plot(n_vel[0], n_vel[1], 'ys', markersize=8, label=f'Neighbor {neighbor_id} Vel')
-        # Draw a circle representing the "risk zone"
-        circle = plt.Circle((n_vel[0], n_vel[1]), radius=agent.config.radius + belief.config.radius, 
-                              color='yellow', fill=False, linestyle='--', alpha=0.8)
-        plt.gca().add_artist(circle)
-
-    plt.title(f'Agent {agent_id} Velocity Space Risk Terrain at Time {time:.2f}s (vz slice={pref_vel[2]:.2f}m/s)')
-    plt.xlabel('vx (m/s)')
-    plt.ylabel('vy (m/s)')
-    plt.axis('equal')
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.legend()
-    plt.show()
-'''
 
 # 从CSV文件读取数据并进行采样
 def read_and_sample_data(file_path, max_samples=100):
@@ -271,7 +160,8 @@ def main():
     # 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     print(current_dir)
-    file_path = os.path.join(current_dir, '..', 'results', 'batch', '4', 'orca_plane_scenarios\\plane_scenarios', '2_agents_xy_M_trajectory'+'.csv')
+    # file_path = os.path.join(current_dir, '..', 'results', 'test-trajectory'+'.csv')
+    file_path = os.path.join(current_dir, '..', 'results', 'batch', '1', 'plane_scenarios', '2_agents_xy_M_trajectory'+'.csv')
     # file_path = os.path.join(current_dir, '..', 'results', 'batch', '2', 'pica_scenarios', 'SPHERE_DISCRETE_trajectory'+'.csv')
     max_samples = 60  # 最大采样点数，可以根据需要调整
     
