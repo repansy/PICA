@@ -77,30 +77,3 @@ class Line:
     def __init__(self, point: Vector3D = Vector3D(), direction: Vector3D = Vector3D()):
         self.point = point
         self.direction = direction
-
-
-class SlowBrainPolicy:
-    """
-    慢脑输出的战略策略。
-    这是一个数据容器，用于在慢脑和快脑之间传递信息。
-    """
-    # 具有长远协同节奏的理想速度
-    v_ideal: Vector3D = Vector3D(0, 0, 0)
-    
-    # 用于QP成本函数的动态权重矩阵，体现了战略偏好
-    m_cost: np.ndarray = np.eye(3)
-
-class NeighborBelief:
-    """
-    慢脑对某个邻居的内部信念模型。
-    存储了通过时频分析得出的关于邻居行为模式的认知。
-    """
-    # 邻居速度轨迹中的主导行为频率 (Hz)
-    omega: float = 0.0
-    
-    # 对应主导频率的相位 (radians)
-    phi: float = 0.0
-    
-    # 对这个频率-相位模型的置信度 (0 to 1)
-    confidence: float = 0.0
-    

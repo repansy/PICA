@@ -88,6 +88,6 @@ def batch_run_scenarios():
 
 if __name__ == "__main__":
     
-    # main()
-    batch_run_plane_scenarios()
+    main()
+    # batch_run_plane_scenarios()
     # batch_run_scenarios()

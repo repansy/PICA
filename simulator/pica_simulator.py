@@ -6,16 +6,14 @@ import csv
 import os
 
 # Use a generic type hint that works for both Agent and OrcaAgent
-# from agent.pica_agent import Agent as PicaAgent
-from examples.pica_3d.v2.pica_agent import Agent as PicaAgent
+# from examples.pica_3d.v2.pica_agent import Agent as PicaAgent
+from agent.pica_agent import PicaAgent
 from agent.orca_agent import OrcaAgent
-
-# --- THE FIX IS HERE ---
-# This uses the backward-compatible Union type instead of the modern '|' operator.
 Agent = Union[PicaAgent, OrcaAgent] 
 
-# import enviroments.config as cfg
-from examples.pica_3d.v2 import config as cfg
+# Here is the important cfg
+# from examples.pica_3d.v2 import config as cfg
+import enviroments.config as cfg
 
 class Simulator:
     """Manages the overall simulation, including agent states, collision detection, and visualization."""

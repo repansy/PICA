@@ -12,6 +12,9 @@ class OrcaAgent:
         self.pos = pos
         self.vel = Vector3D()
         self.goal = goal
+        # i will come back just in probalic
+        # self.priority = priority
+        # self.inertia_matrix = inertia_matrix
         
         # 从 kwargs 获取参数，提供默认值
         self.radius: float = cfg.AGENT_RADIUS
