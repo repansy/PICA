@@ -17,7 +17,7 @@ VISUALIZE = True
 PLOT_FREQUENCY = 5
 
 # --- Simulation Parameters ---
-NUM_AGENTS = 20
+NUM_AGENTS = 32
 TIMESTEP = 0.1  # seconds
 SIMULATION_TIME = 300  # seconds
 WORLD_SIZE = (50, 50, 50) # meters (x, y, z)

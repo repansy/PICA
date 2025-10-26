@@ -7,7 +7,7 @@ import os
 
 # Use a generic type hint that works for both Agent and OrcaAgent
 # from examples.pica_3d.v2.pica_agent import Agent as PicaAgent
-from agent.pica_agent import PicaAgent
+from agent.pivo_agent import BCOrcaAgent as PicaAgent
 from agent.orca_agent import OrcaAgent
 Agent = Union[PicaAgent, OrcaAgent] 
 
@@ -68,16 +68,21 @@ class Simulator:
         
     def step(self):
         """Advances the simulation by one timestep."""
-        if hasattr(self.agents[0], 'inertia_matrix'):
-            # 1. Compute all new velocities first.
-            new_velocities = {}
+        if hasattr(self.agents[0], 'M'):
+            # 1. 感知和慢脑决策
             for agent in self.agents:
-                v_new = agent.compute_new_velocity(self.agents, self.dt)
-                new_velocities[agent.id] = v_new
-                
-            # 2. Update all agents' positions simultaneously.
+                agent.compute_neighbors(self.agents)
+                agent.compute_congestion() # 计算自己的拥挤度
+                agent.run_slow_brain(self.agents) # 运行慢脑，估计和预测邻居
+
+            # 2. 快脑决策和速度计算
             for agent in self.agents:
-                agent.update(new_velocities[agent.id], self.dt)
+                agent.compute_preferred_velocity()
+                agent.compute_new_velocity(self.dt) # 运行快脑，计算最终速度
+
+            # 3. 更新状态
+            for agent in self.agents:
+                agent.update(self.dt) # 应用速度，更新位置，并记录历史
         else:
             # 1. Compute all new velocities first.
             for agent in self.agents:
@@ -157,11 +162,11 @@ class Simulator:
         # 用于跟踪已使用的颜色索引
         color_index = 0
         for i, agent in enumerate(self.agents):
-            if hasattr(agent, 'inertia_matrix'):
+            if hasattr(agent, 'M'):
                 # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）,惯性矩阵主要通过对角线元素体现不同方向的惯性
-                inertia_feature = tuple(agent.inertia_matrix.diagonal())
+                inertia_feature = agent.M.norm_sq()
                 # 组合优先级和惯性特征作为唯一标识
-                agent_key = (agent.priority, inertia_feature)
+                agent_key = (agent.P, inertia_feature)
             else:
                 # 对于无 inertia_matrix 的 OrcaAgent，使用固定标识
                 agent_key = ("orca",)  # 用元组确保可哈希

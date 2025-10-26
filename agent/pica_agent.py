@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 
 from utils.pica_structures import Vector3D
 from enviroments import config as cfg
-# from agent.optimizer import Optimizer
+from agent.optimizer import Optimizer
 
 class PicaAgent:
     def __init__(self, id: int, pos: Vector3D, goal: Vector3D, inertia_matrix: np.ndarray, priority: float = 1.0, **kwargs):
@@ -43,8 +43,7 @@ class PicaAgent:
         self.should_contour = True
         self.alphas: Dict[int, float] = {}
         self.at_goal = False
-        self.optimzer = 1 #TODO:完善快慢脑算法
-
+        
     def update(self, new_velocity: Vector3D, dt: float):
         """
         更新智能体状态（位置、速度、不确定性）
@@ -61,6 +60,7 @@ class PicaAgent:
             new_velocity = new_velocity.normalized() * self.max_speed
         
         self.mu_vel = new_velocity
+        self._break_deadlock()
         self.mu_pos += self.mu_vel * dt
 
         process_noise = np.eye(3) * cfg.PROCESS_NOISE_FACTOR
@@ -78,19 +78,17 @@ class PicaAgent:
         
         # 1. 初始化和邻居筛选
         neighbors = self._filter_neighbors(all_agents)
-        v_pref = self._break_deadlock(self._get_preferred_velocity(), neighbors)
+        v_pref = self._get_preferred_velocity()
         
         # --- 中央融合与约束生成 ---
         constraints = []
         for neighbor in neighbors:
             effective_states = self._get_effective_state_for_interaction(neighbor)
-            threat_score = self._calculate_threat(self, neighbor)
-
+            
             # TODO 在此输入更多的参数以满足绘制需要
-            # alpha = self.optimzer._optimize_alpha_hybrid(neighbor, threat_score, effective_states, v_pref)
-            alpha = 0.5
-
-            constraint = self._create_pica_halfspace_from_states(alpha, effective_states)
+            output = Optimizer(effective_states)._optimize_alpha_hybrid(neighbors)
+            self.no_contour = output['no_contour']
+            constraint = self._create_pica_halfspace_from_states(output['alpha_star'], effective_states)
             if constraint:
                 constraints.append(constraint)
         #TODO linear-program
@@ -158,9 +156,18 @@ class PicaAgent:
             w_norm_sq = w.norm_sq()
 
             dot_product = w.dot(rel_pos)
-            if not self.should_contour: #TODO what a import one
-                print("2222")
-                return None
+            a = dist_sq
+            b = rel_pos.dot(rel_vel)
+            cross_prod_sq = rel_pos.norm_sq() * rel_vel.norm_sq() - b**2
+            c = rel_vel.norm_sq() - cross_prod_sq / (dist_sq - combined_radius_sq)
+            discriminant = b**2 - a * c
+
+            will_no_collide = discriminant < 0 or (w_norm_sq > vo_radius_sq and dot_product<0)
+            
+            if self.no_contour and will_no_collide:
+                # 判别式小于0，意味着 rel_vel 在无限大圆锥之外。
+                # 这是绝对安全的信号，无论球面顶盖在哪里。
+                return None  # 无需施加任何约束
 
             if w_norm_sq <= vo_radius_sq:
                 normal = w.normalized() if w.norm_sq() > 1e-9 else -rel_pos.normalized()
@@ -177,29 +184,6 @@ class PicaAgent:
         offset = plane_point.dot(normal)
         
         return {'normal': normal, 'offset': offset}
-
-    def _calculate_threat(self, agent_i: 'PicaAgent', agent_j: 'PicaAgent') -> float:
-        """
-        基于状态计算风险评分，综合考虑距离风险和碰撞时间风险。
-        参数: states: 状态字典
-        返回: float: 风险评分
-        """
-        states = {"pos_i": agent_i.mu_pos, "vel_i": agent_i.mu_vel, "pos_j": agent_j.mu_pos, "vel_j": agent_j.mu_vel}
-        rel_pos = states["pos_j"] - states["pos_i"]
-        dist = rel_pos.norm()
-        if dist < 1e-6: return float('inf')
-        rel_vel = states["vel_i"] - states["vel_j"]
-        vel_dot_pos = rel_vel.dot(rel_pos)
-        if vel_dot_pos <= 0:
-            # 正在远离或无接近分量，只有距离风险
-            return cfg.RISK_W_DIST / dist
-        rel_vel_sq = rel_vel.norm_sq()
-        if rel_vel_sq < 1e-6:
-            # 计算碰撞时间（TTC）
-            return cfg.RISK_W_DIST / dist
-        ttc = vel_dot_pos / rel_vel_sq
-        # 综合风险 = 距离风险 + 碰撞时间风险（越短风险越高）
-        return cfg.RISK_W_DIST / dist + cfg.RISK_W_TTC / (ttc + 0.1)
 
     def _solve_velocity_3d(self, constraints: List[Dict], v_pref: Vector3D) -> Vector3D:
         """
@@ -250,7 +234,7 @@ class PicaAgent:
                 neighbors.append(agent)
         return neighbors
     
-    def _break_deadlock(self, v_pref: Vector3D, neighbors: List['PicaAgent']) -> Vector3D:
+    def _break_deadlock(self) -> Vector3D:
         """
         打破对称死锁, 通过添加微小扰动，避免智能体在场景中僵持。
         参数:
@@ -259,7 +243,8 @@ class PicaAgent:
         返回:
             Vector3D: 可能扰动后的速度
         """
-        if self.mu_vel.norm_sq() > 0.1 and neighbors:
+        v_pref = self.mu_vel
+        if self.mu_vel.norm_sq() < 0.1 and self.at_goal == False:
             # 转动小角度，随机转动
             perturb_angle = 0.015 * (random.randint(-10, 10))
             # perturb_angle = (self.id % 20 - 10) * 0.015
@@ -268,8 +253,4 @@ class PicaAgent:
             px = v_pref.x * c - v_pref.y * s
             py = v_pref.x * s + v_pref.y * c
             v_pref_perturbed = Vector3D(px, py, v_pref.z)
-            # 再次限制速度
-            if v_pref_perturbed.norm() > self.max_speed:
-                return v_pref_perturbed.normalized() * self.max_speed
-            return v_pref_perturbed
-        return v_pref
+            self.mu_vel = v_pref_perturbed

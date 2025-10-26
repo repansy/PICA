@@ -65,6 +65,8 @@ class Vector3D:
     def to_numpy(self):
         """Converts the vector to a NumPy array for matrix operations."""
         return np.array([self.x, self.y, self.z])
+    
+    def is_zero(self): return self.norm_sq() < 1e-12
 
 
 # --- 数据结构 (Plane 和 Line) ---

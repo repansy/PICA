@@ -6,6 +6,9 @@ from enviroments.scenario import scenario_factory
 from enviroments.scenario_plane import plane_scenario_factory
 import os
 
+from utils.pica_structures import Vector3D
+from enviroments.scenario_test import HeterogeneousSphereScenario 
+
 def main():
     """主函数，根据config选择并运行仿真"""
 
@@ -88,6 +91,58 @@ def batch_run_scenarios():
 
 if __name__ == "__main__":
     
-    main()
+    # main()
     # batch_run_plane_scenarios()
     # batch_run_scenarios()
+
+    # 示例 1: 离散三级场景 (高/中/低)
+    print("--- 正在创建离散三级场景 (30% 高, 50% 中, 20% 低) ---")
+    discrete_groups = [
+        {
+            'ratio': 0.3, 
+            'params': {'radius': 0.5, 'P': 0.9, 'M': Vector3D(1.0, 1.0, 1.0)}
+        },
+        {
+            'ratio': 0.5, 
+            'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
+        },
+        {
+            'ratio': 0.2, 
+            'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}
+        },
+    ]
+    discrete_scenario = HeterogeneousSphereScenario(agent_groups=discrete_groups, num_agents=10)
+    discrete_agents = discrete_scenario.create_agents()
+    print(f"成功创建 {len(discrete_agents)} 个智能体。\n")
+
+    # 示例 2: 角色扮演场景 (重型 vs 敏捷)
+    print("--- 正在创建角色扮演场景 (40% 重型, 60% 敏捷) ---")
+    role_based_groups = [
+        {
+            'ratio': 0.4, 
+            'params': {'radius': 0.8, 'P': 0.8, 'M': Vector3D(5.0, 5.0, 5.0)} # 重型: R大, P高, M大
+        },
+        {
+            'ratio': 0.6, 
+            'params': {'radius': 0.4, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)} # 敏捷: R小, P低, M小
+        },
+    ]
+    role_scenario = HeterogeneousSphereScenario(agent_groups=role_based_groups, num_agents=10)
+    role_agents = role_scenario.create_agents()
+    print(f"成功创建 {len(role_agents)} 个智能体。\n")
+
+    # 示例 3: 单一异质性测试 (仅半径不同)
+    print("--- 正在创建仅半径不同的场景 (50% 大, 50% 小) ---")
+    radius_groups = [
+        {
+            'ratio': 0.5, 
+            'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
+        },
+        {
+            'ratio': 0.5, 
+            'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
+        },
+    ]
+    radius_scenario = HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=10)
+    radius_agents = radius_scenario.create_agents()
+    print(f"成功创建 {len(radius_agents)} 个智能体。\n")

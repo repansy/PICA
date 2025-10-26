@@ -16,44 +16,31 @@ VISUALIZE = True
 PLOT_FREQUENCY = 5
 
 # --- Simulation Parameters ---
-NUM_AGENTS = 20
+NUM_AGENTS = 16
 TIMESTEP = 0.1  # seconds
 SIMULATION_TIME = 300  # seconds
 WORLD_SIZE = (50, 50, 50) # meters (x, y, z)
 
 # --- Agent Physical Properties ---
-AGENT_RADIUS = 0.5  # meters
-MAX_SPEED = 2.0     # meters/second
-RVO3D_EPSILON = 0.00001 
 ACCELERATION_MAX = 2.0
+# --- B-ORCA 2.0 核心配置 ---
 
-# --- [新] 概率不确定性建模 (Probabilistic Uncertainty Modeling) ---
-# 该模块取代了原有的 UNCERTAINTY_BUFFER，提供了更动态、更真实的建模方式
-# 过程噪声，模拟不确定性随时间的自然增长
-PROCESS_NOISE_FACTOR = 0.001 
-# 在计算有效状态时使用的置信水平（N个标准差），值越高越保守
-UNCERTAINTY_CONFIDENCE_N = 2.5 
+# 智能体物理属性与异质性建模
+AGENT_RADIUS = 0.5         # 智能体基础半径 (m)
+MAX_SPEED = 2.0            # 智能体最大速度 (m/s)
+M_BASE = 1.0               # 基础惯性/运动能力值
+K_M = 0.5                  # 惯性随半径增长的系数 (用于R-M绑定)
 
-# --- PICA 核心算法参数 ---
-# 对风险最高的K个邻居启动完整的混合PICA优化
-PICA_K = 5 
-# Alpha值的更新阻尼因子，防止振荡，保持系统稳定性
-PICA_BETA_DAMPING = 0.25 
-# 用于浮点数比较和数值计算的微小量，保证稳定性
-PICA_EPSILON = 1e-5
-# 规避时的时间视界(tau)。值越大，规避动作越平滑、越有预见性。原1.0s太短，易导致急促反应。
-TTC_HORIZON = 3.0 # seconds 
+# 慢脑：在线估计与意图预测
+HISTORY_LEN = 10           # 存储历史轨迹的长度，用于估计邻居属性
+BETA_SMOOTHING = 0.7       # 预测速度(v_pred)与当前速度(v_j)的平滑因子，防止预测突变
 
-# --- 风险评估与混合模型参数 ---
-# 风险评分中距离和TTC的权重。这些是绝对权重，无需归一化。
-RISK_W_DIST = 1.0
-RISK_W_TTC = 2.5
-# 混合模型的风险阈值，决定解析法和启发式的权重
-RISK_THRESHOLD_LOW = 5.0  # 低于此风险，完全使用启发式
-RISK_THRESHOLD_HIGH = 20.0 # 高于此风险，完全使用解析法
+# 快脑：混合责任分配权重
+# 这三个权重用于计算智能体的“机动成本”，决定了在快脑责任中的避让倾向
+W_P = 0.5                  # 任务优先级(P)的权重
+W_M = 0.3                  # 惯性/运动能力(M)的权重
+W_R = 0.2                  # 半径(R)的权重
 
-# --- 局部密度计算参数 ---
-# 密度计算的高斯核宽度，即“感知”拥挤程度的范围
-DENSITY_SIGMA = 5.0 
-# 密度值的平滑因子，防止因邻居瞬时移动造成密度剧烈波动
-DENSITY_BETA_SMOOTHING = 0.7 
+# 数值稳定性
+EPSILON = 1e-6             # 用于避免除零等计算问题的微小正数
+

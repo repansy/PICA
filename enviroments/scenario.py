@@ -6,8 +6,9 @@ from typing import List, Dict
 from utils.pica_structures import Vector3D
 # from examples.pica_3d.v2.pica_agent import Agent
 # from agent.orca_agent import OrcaAgent as Agent
-from agent.pica_agent import PicaAgent as Agent
-from examples.pica_3d.v2 import config as cfg
+# from examples.pica_3d.v2 import config as cfg
+from agent.pivo_agent import BCOrcaAgent as Agent
+from enviroments import config as cfg
 
 
 class BaseSphereScenario:
