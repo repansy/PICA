@@ -52,7 +52,7 @@ class Simulator:
         self.csv_file = csv.writer(self.csv_file_handle)
         
         self.csv_file_handle_2 = open(cfg.TRAJECTORY_FILE_2, 'w', newline='')
-        self.csv_file_2 = csv.writer(self.csv_file_handle)
+        self.csv_file_2 = csv.writer(self.csv_file_handle_2)
         
         # 创建表头 [Agent0_x,Agent0_y,Agent0_z,Agent1_x,Agent1_y,Agent1_z,...]
         header = []
@@ -93,7 +93,7 @@ class Simulator:
             for agent in self.agents:
                 agent.compute_neighbors(self.agents)
                 agent.compute_congestion() # 计算自己的拥挤度
-                agent.run_slow_brain(self.dt) # 运行慢脑，估计和预测邻居
+                agent.run_slow_brain() # 运行慢脑，估计和预测邻居
 
             # 2. 快脑决策和速度计算
             for agent in self.agents:

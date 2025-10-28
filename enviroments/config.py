@@ -4,7 +4,7 @@
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\3'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\4'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
@@ -38,7 +38,6 @@ K_M = 0.5                  # 惯性随半径增长的系数 (用于R-M绑定)
 
 # 慢脑：在线估计与意图预测
 HISTORY_LEN = 10           # 存储历史轨迹的长度，用于估计邻居属性
-BETA_SMOOTHING = 0.7       # 预测速度(v_pred)与当前速度(v_j)的平滑因子，防止预测突变
 
 # 快脑：混合责任分配权重
 # 这三个权重用于计算智能体的“机动成本”，决定了在快脑责任中的避让倾向

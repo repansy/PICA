@@ -113,15 +113,15 @@ print("--- 正在创建离散三级场景 (30% 高, 50% 中, 20% 低) ---")
 discrete_groups = [
     {
         'ratio': 0.3, 
-        'params': {'radius': 0.8, 'P': 0.9, 'M': Vector3D(5.0, 5.0, 5.0)}
+        'params': {'radius': 5.0, 'P': 0.9, 'M': Vector3D(5.0, 5.0, 5.0)}
     },
     {
         'ratio': 0.5, 
-        'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}
+        'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}
     },
     {
         'ratio': 0.2, 
-        'params': {'radius': 0.2, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}
+        'params': {'radius': 0.5, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}
     },
 ]
 
@@ -129,11 +129,11 @@ discrete_groups = [
 radius_groups = [
     {
         'ratio': 0.5, 
-        'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}
+        'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(3.0, 3.0, 3.0)}
     },
     {
         'ratio': 0.5, 
-        'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
+        'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
     },
 ]
 
@@ -151,10 +151,10 @@ role_based_groups = [
 
 HeterogeneousSphereScenario_factory = {
     
-    'SPHERE_DISCRETE': lambda: HeterogeneousSphereScenario(agent_groups=discrete_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # 'SPHERE_DISCRETE': lambda: HeterogeneousSphereScenario(agent_groups=discrete_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
     # 'SPHERE_DYNAMIC': lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
     'SPHERE_INERTIA' : lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'SPHERE_ROLE_BASED': lambda: HeterogeneousSphereScenario(agent_groups=role_based_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # 'SPHERE_ROLE_BASED': lambda: HeterogeneousSphereScenario(agent_groups=role_based_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
 
 }
 

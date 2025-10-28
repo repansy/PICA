@@ -1,12 +1,11 @@
 import math
 import random
-import numpy as np
 from typing import List, Dict, Any, Tuple
 from collections import deque
 import enviroments.config as cfg
 from utils.pica_structures import Vector3D, Plane
 from utils.linear_solver import linear_program3, linear_program4
-
+from scipy.optimize import minimize
 
 # --- B-ORCA 2.0: 融合快慢脑与在线估计的ORCA实现 ---
 class BCOrcaAgent:
@@ -46,13 +45,13 @@ class BCOrcaAgent:
         self.pref_velocity = Vector3D()
         self.agent_neighbors: List['BCOrcaAgent'] = []
         self.orca_planes: List[Plane] = []
-        self.alpha : Dict = {"f" : 1,"s":1,"h":1}
+        self.alpha: Dict = {'f':1,'s':1,'h':1}
 
     # =================================================================================
     # --- 慢脑 (Slow Brain) 模块 ---
     # =================================================================================
 
-    def run_slow_brain(self, dt):
+    def run_slow_brain(self):
         """
         慢脑主函数：对所有邻居进行状态估计和意图预测。
         在计算新速度之前，为每个智能体调用一次。
@@ -66,65 +65,56 @@ class BCOrcaAgent:
             # 2. 预测邻居的意图速度和置信度
             v_pred, confidence = self._predict_neighbor_intention(other)
 
-            # 3. 解析法责任规划 (Analytical Responsibility Planning) ---
-            # a. 计算双方的感知交互压力
-            rho_i_to_j = self.rho
-            rho_est = self._estimate_perceived_pressure(other, m_est)
-
-            # b. 动力学线性化 (高效版)
-            # 计算校正向量 u，它是在当前状态下对速度梯度 k 的高效近似
-            u_i = self._calculate_u_vector(other.pos - self.pos, self.vel - v_pred, self.radius + other.radius, dt)
-            # 对'other'，使用其当前速度和'self'的当前速度进行对称计算
-            u_j = self._calculate_u_vector(self.pos - other.pos, other.vel - self.vel, self.radius + other.radius, dt)
-            k_i, k_j = u_i, u_j
-
-            # 基准速度 v_base 就是当前速度
-            v_base_i = self.vel
-            v_base_j = other.vel
-            
-            # 获取双方的偏好速度
-            v_pref_i = self.pref_velocity
-            v_pref_j = v_pred
-
-            # c. 计算二次函数系数 K1 和 K2
-            # 辅助函数，计算 v^T * M * v (利用M是对角阵的特性)
-            def weighted_norm_sq(v, M): return M.x * v.x**2 + M.y * v.y**2 + M.z * v.z**2
-            def weighted_dot(v1, M, v2): return M.x * v1.x * v2.x + M.y * v1.y * v2.y + M.z * v1.z * v2.z
-
-            # 计算 K1 = ρ_i * (k_i^T M_i k_i) + ρ_j * (k_j^T M_j k_j)
-            k1 = rho_i_to_j * weighted_norm_sq(k_i, self.M) + rho_est * weighted_norm_sq(k_j, m_est)
-
-            # 计算 K2 = 2*ρ_i*(k_i^T*M_i*(v_base_i - v_pref_i)) - 2*ρ_j*(k_j^T*M_j*(v_base_j + k_j - v_pref_j))
-            delta_v_pref_i = v_base_i - v_pref_i
-            # 对于agent j，其线性模型 v'_j(α_i) ≈ v_base_j + k_j * (1 - α_i)
-            # 因此，速度偏离项是 v_base_j + k_j*(1-α_i) - v_pref_j
-            # 我们关心 α_i 的一次项系数，即 -2*ρ_j*k_j^T*M_j*k_j
-            # 和常数项 2*ρ_j*k_j^T*M_j*(v_base_j + k_j - v_pref_j)
-            # 但是我们只代入 alpha=0 的部分到 K2
-            delta_v_pref_j = v_base_j + k_j - v_pref_j
-            
-            k2 = 2 * rho_i_to_j * weighted_dot(k_i, self.M, delta_v_pref_i) - \
-                2 * rho_est * weighted_dot(k_j, m_est, delta_v_pref_j)
-
-            # d. 求解最优 alpha
-            if abs(k1) < cfg.EPSILON:
-                # K1为0，代价函数是线性的，最优解在边界上
-                alpha_analytical = 0.0 if k2 > 0 else 1.0
-            else:
-                alpha_analytical = -k2 / (2 * k1)
-            
-            # 将结果限制在 [0, 1] 范围内
-            alpha_slow = np.clip(alpha_analytical, 0.0, 1.0)
-
             # 存储所有结果，供快脑使用
             self.slow_brain_results[other.id] = {
-                "p_est": p_est, "m_est": m_est, "rho_est": rho_est,
+                "p_est": p_est, "m_est": m_est,
                 "v_pred": v_pred, "confidence": confidence,
-                "alpha_slow": alpha_slow
             }
 
+    def optimize_alpha_from_u(self, u, p_est, m_est, alpha_prior, lambda_reg=1.0):
+        """
+        基于避障向量u优化责任系数alpha
+        参数：
+            u: 避障向量（Vector3D，numpy数组，shape=(3,)）
+            M_self: 自身质量（已知）
+            a_max_self: 自身最大避障加速度（已知）
+            p_est: 邻居能力估计（0~1）
+            M_est: 邻居估计质量
+            a_max_est: 邻居估计最大避障加速度
+            alpha_prior: 初始责任系数（步骤二计算的先验值）
+            lambda_reg: 正则项权重（默认1.0）
+        返回：
+            alpha_opt: 优化后的责任系数
+        """
+        # 步骤1：计算避障需求强度s
+        s = u.norm()  # u的幅值（避障需求强度）
+        
+        # 步骤2：计算自身和邻居的贡献度
+        C_self =  self.P * min([s*self.M.norm(), 1])  # 自身对u的贡献度
+        C_other_est = p_est * min([s*m_est.norm(), 1.0])  # 邻居估计贡献度
+        
+        # 步骤3：定义目标函数L(alpha)
+        def loss(alpha):
+            # 第一项：alpha与自身贡献度占比的偏差
+            target_ratio = C_self / (C_self + C_other_est + cfg.EPSILON)
+            term1 = abs(alpha - target_ratio)
+            # 第二项：与先验alpha的偏差（正则项）
+            term2 = lambda_reg * abs(alpha - alpha_prior)
+            return term1 + term2
+        
+        # 步骤4：优化求解（约束0≤alpha≤1）
+        bounds = [(0.0, 1.0)]  # alpha的取值范围
+        result = minimize(
+            loss,
+            x0=alpha_prior,  # 初始猜测值（先验alpha）
+            bounds=bounds,
+            method='L-BFGS-B'  # 适合边界约束的凸优化方法
+        )
+        
+        return result.x[0]  # 优化后的alpha
+    
     def _estimate_neighbor_properties(self, other: 'BCOrcaAgent') -> Tuple[float, Vector3D, float]:
-        """估计邻居 'other' 的 P, M, 和 rho"""
+        """估计邻居 'other' 的 P, M"""
 
         # 估计 P_j 和 M_j (需要历史轨迹)
         if not other.history or len(other.history) < 2:
@@ -149,9 +139,9 @@ class BCOrcaAgent:
                 accels.append(accel_mag)
         
         avg_accel = sum(accels) / len(accels) if accels else 0
-        # M 与加速度大小成反比
+        # M 与加速度大小成反比与radius成线性或正比
         if avg_accel > cfg.EPSILON:
-            m_est_mag = 1.0 / avg_accel
+            m_est_mag = other.radius / avg_accel
             m_est = Vector3D(m_est_mag, m_est_mag, m_est_mag)
         else:
             m_est = other.M # 无法估计，返回默认值
@@ -197,67 +187,77 @@ class BCOrcaAgent:
         }
 
         # 6. 计算加权的预测速度 (raw)
-        v_pred_raw = v_inertial * posterior_inertial + v_goal_oriented * posterior_goal
-        
-        # 7. 与当前速度平滑，防止突变
-        v_pred = other.vel * cfg.BETA_SMOOTHING + v_pred_raw * (1.0 - cfg.BETA_SMOOTHING)
+        v_pred = v_inertial * posterior_inertial + v_goal_oriented * posterior_goal
 
         # 8. 计算置信度
         confidence = max(posterior_inertial, posterior_goal)
         
         return v_pred, confidence
-    
-    def _estimate_perceived_pressure(self, other: 'BCOrcaAgent', m_est_other: Vector3D) -> float:
-        """计算 self 对 other 的感知交互压力 rho"""
-        # 定义权重，这些可以作为配置参数
-        w_R, w_M, w_d = 0.1, 0.1, 0.1
-        
-        volume = other.radius
-        # 使用弗罗贝尼乌斯范数的平方，避免开根号
-        m_norm_sq = m_est_other.norm_sq() + cfg.EPSILON
-        dist = (self.pos - other.pos).norm() + cfg.EPSILON
-        
-        pressure = w_R * volume + w_M * (1.0 / m_norm_sq) + w_d * (1.0 / dist)
-        
-        # 将压力值限制在一个合理范围，例如 [0.1, 2.0]，避免极端值影响
-        return np.clip(pressure, 0.1, 1.0)
-    
-    def _calculate_u_vector(self, relative_position: Vector3D, relative_velocity: Vector3D, combined_radius: float, dt:float) -> Vector3D:
-        """【完整实现】根据ORCA几何，计算核心的校正向量 u"""
-        dist_sq = relative_position.norm_sq()
-        combined_radius_sq = combined_radius**2
-        inv_time_horizon = 1.0 / self.time_horizon
 
-        if dist_sq > combined_radius_sq: # --- 非碰撞情况 ---
-            w = relative_velocity - inv_time_horizon * relative_position
-            w_length_sq = w.norm_sq()
-            dot_product = w.dot(relative_position)
-
-            if dot_product < 0.0 and dot_product**2 > combined_radius_sq * w_length_sq:
-                # 投影在截断平面上
-                w_length = math.sqrt(w_length_sq)
-                unit_w = w / w_length
-                return (combined_radius * inv_time_horizon - w_length) * unit_w
-            else:
-                # 投影在圆锥侧面上
-                a = dist_sq
-                b = relative_position.dot(relative_velocity)
-                c = relative_velocity.norm_sq() - ( (relative_position.x * relative_velocity.y - relative_position.y * relative_velocity.x)**2 ) / (dist_sq - combined_radius_sq) if abs(dist_sq - combined_radius_sq) > cfg.EPSILON else relative_velocity.norm_sq()
-
-                discriminant = b**2 - a * c
-                if discriminant < 0: return Vector3D()
-                
-                t = (b + math.sqrt(discriminant)) / a
-                
-                ww = relative_velocity - t * relative_position
-                return (combined_radius * t - ww.norm()) * ww.normalized()
-        else: # --- 碰撞情况 ---
-            inv_time_step = 1.0 / dt
-            w = relative_velocity - inv_time_step * relative_position
-            return (combined_radius * inv_time_step - w.norm()) * w.normalized()
     # =================================================================================
     # --- 快脑 (Fast Brain) 模块 与 核心逻辑修改 ---
     # =================================================================================
+
+    def solve_fast_brain(self, other:'BCOrcaAgent'):
+        # 1. 计算当前风险指标
+        d_vec = other.pos - self.pos
+        d = d_vec.norm()
+        if d < cfg.EPSILON:
+            return 0.5
+        d_hat = d_vec /d
+        v_rel = self.vel - other.vel
+        v_rel_norm = v_rel.norm()
+        v_radial = v_rel.dot(d_hat) # 计算径向速度 (判断靠近/远离)
+        
+        if v_rel_norm > cfg.EPSILON:
+            cross_product = d_vec.cross(v_rel)
+            d_cpa = cross_product.norm() / v_rel_norm
+        else:
+            d_cpa = d  # 相对速度很小时，使用当前距离
+        safe_margin = 0.1
+        R_sum = self.radius + other.radius + safe_margin
+        if d_cpa < R_sum:
+            # 预测会碰撞，紧急程度高
+            E = v_rel_norm / max(R_sum - d_cpa, cfg.EPSILON)
+        else:
+            # 预测不会碰撞，紧急程度低
+            E = v_rel_norm / max(d_cpa - R_sum, cfg.EPSILON)
+
+        Y_base = v_rel_norm / d
+    
+        # 根据运动趋势调整风险
+        if v_radial < 0:  # 正在靠近
+            Y = Y_base * (1 + E)
+        else:  # 正在远离
+            # 风险衰减系数 (0.5表示风险减半)
+            Y = Y_base * (1 - 0.5 * min(E, 1))    
+        # 2. 计算反事实风险
+        if v_radial < 0:  # 靠近时
+            Y_self = other.vel.norm() / d
+            Y_other = self.vel.norm() / d
+        else:  # 远离时
+            # 自身停止可能增加风险
+            Y_self = Y_base
+            Y_other = Y_base
+        # 3. 计算风险贡献、取风险增加量
+        tau_self = Y - Y_self
+        tau_other = Y - Y_other
+        
+        # 只考虑增加风险的行为
+        Delta_self = max(0, tau_self)
+        Delta_other = max(0, tau_other)
+        # 4. 计算信息完整性因子
+        density_factor = 1 / (1 + math.exp(-10*(self.rho - 0.5)))  # 密度在0.5处为转折点
+
+        # 5. 计算责任权重并归一化
+        w_self = Delta_self * (1 - 0.5 * density_factor)
+        w_other = Delta_other * (1 - 0.5 * density_factor)
+        w_total = w_self + w_other
+        if w_total > cfg.EPSILON:
+            alpha_fast = w_other / w_total
+        else:
+            alpha_fast = 0.5
+        return alpha_fast
 
     def compute_new_velocity(self, dt: float):
         """
@@ -271,7 +271,8 @@ class BCOrcaAgent:
             if other.id not in self.slow_brain_results: continue # 如果慢脑没有结果，跳过
             
             sb_res = self.slow_brain_results[other.id]
-            v_pred_j = sb_res["v_pred"]
+            confidence = sb_res["confidence"]
+            v_pred_j = confidence * sb_res["v_pred"] + (1 - confidence) * other.vel
             
             # 使用预测的速度，而不是当前速度
             relative_velocity = self.vel - v_pred_j
@@ -317,31 +318,25 @@ class BCOrcaAgent:
                 u = (combined_radius * inv_time_step - w_length) * unit_w
             
             # --- MODIFICATION START: 混合责任分配 ---
-            # 1. 快脑责任 (基于估计的物理属性)
-            cost_i = cfg.W_P * self.P + cfg.W_M * 1 / self.M.norm() + cfg.W_R * self.rho
-            cost_j_est = cfg.W_P * sb_res["p_est"] + cfg.W_M * 1 / sb_res["m_est"].norm() + cfg.W_R * sb_res["rho_est"]
-            alpha_fast = cost_j_est / (cost_i + cost_j_est + cfg.EPSILON)
-
-            # 2. 慢脑责任 (已在慢脑中计算)
-            alpha_slow = sb_res["alpha_slow"]
+            # 1. 快脑责任 
+            alpha_fast = self.solve_fast_brain(other)
+            
+            # 2. 慢脑责任 (基于估计的物理属性, 已在慢脑中计算)
+            alpha_slow = self.optimize_alpha_from_u(u, sb_res['p_est'], sb_res['m_est'], 0.5)
             
             # 3. 置信度混合
-            confidence = sb_res["confidence"]
             alpha_hybrid = confidence * alpha_slow + (1.0 - confidence) * alpha_fast
-            
+            print(alpha_hybrid)
             # 原来的责任是 0.5，现在替换为混合责任
             plane.point = self.vel + alpha_hybrid * u
+            
             # --- MODIFICATION END ---
             
             self.orca_planes.append(plane)
 
-            self.alpha = {"f":alpha_fast, "s":alpha_slow, "h":alpha_hybrid}
-
         fail_plane, self.new_velocity = linear_program3(self.orca_planes, self.max_speed, self.pref_velocity, False)
         if fail_plane < len(self.orca_planes):
             self.new_velocity = linear_program4(self.orca_planes, fail_plane, self.max_speed, self.new_velocity)
-
-        
     
     # =================================================================================
     # --- 更新和辅助函数 (部分有修改) ---

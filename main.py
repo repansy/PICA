@@ -116,4 +116,3 @@ if __name__ == "__main__":
     # batch_run_plane_scenarios()
     # batch_run_scenarios()
     batch_run_hscenarios()
-    
