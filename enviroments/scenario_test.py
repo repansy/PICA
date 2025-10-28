@@ -44,7 +44,7 @@ class HeterogeneousSphereScenario:
 
         # 计算场景中心和球体半径
         self.center = Vector3D(world_size[0] / 2, world_size[1] / 2, world_size[2] / 2)
-        self.radius = min(self.center.x, self.center.y, self.center.z) * 0.9
+        self.radius = min(self.center.x, self.center.y, self.center.z) * 0.8
 
         # 生成均匀分布在球面上的点
         self.sphere_points = self._generate_fibonacci_lattice_points()
@@ -106,4 +106,55 @@ class HeterogeneousSphereScenario:
                 current_agent_idx += 1
         
         return agents
+
+
+# 示例 1: 离散三级场景 (高/中/低)
+print("--- 正在创建离散三级场景 (30% 高, 50% 中, 20% 低) ---")
+discrete_groups = [
+    {
+        'ratio': 0.3, 
+        'params': {'radius': 0.8, 'P': 0.9, 'M': Vector3D(5.0, 5.0, 5.0)}
+    },
+    {
+        'ratio': 0.5, 
+        'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}
+    },
+    {
+        'ratio': 0.2, 
+        'params': {'radius': 0.2, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}
+    },
+]
+
+# 示例 3: 单一异质性测试 (仅半径不同)
+radius_groups = [
+    {
+        'ratio': 0.5, 
+        'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}
+    },
+    {
+        'ratio': 0.5, 
+        'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
+    },
+]
+
+# 示例 2: 角色扮演场景 (重型 vs 敏捷)
+role_based_groups = [
+    {
+        'ratio': 0.4, 
+        'params': {'radius': 0.8, 'P': 0.8, 'M': Vector3D(5.0, 5.0, 5.0)} # 重型: R大, P高, M大
+    },
+    {
+        'ratio': 0.6, 
+        'params': {'radius': 0.4, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)} # 敏捷: R小, P低, M小
+    },
+]
+
+HeterogeneousSphereScenario_factory = {
+    
+    'SPHERE_DISCRETE': lambda: HeterogeneousSphereScenario(agent_groups=discrete_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # 'SPHERE_DYNAMIC': lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'SPHERE_INERTIA' : lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'SPHERE_ROLE_BASED': lambda: HeterogeneousSphereScenario(agent_groups=role_based_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+
+}
 

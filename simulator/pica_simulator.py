@@ -30,6 +30,8 @@ class Simulator:
         # CSV文件记录
         self.csv_file: Optional[csv.writer] = None
         self.csv_file_handle = None
+        self.csv_file_2: Optional[csv.writer] = None
+        self.csv_file_handle_2 = None
         if cfg.RECORD_TRAJECTORY:
             self._setup_csv_file()
             
@@ -43,17 +45,24 @@ class Simulator:
         """创建并初始化CSV文件，写入表头"""
         # 确保目录存在
         os.makedirs(os.path.dirname(cfg.TRAJECTORY_FILE), exist_ok=True)
-        
+        os.makedirs(os.path.dirname(cfg.TRAJECTORY_FILE_2), exist_ok=True)
+
         # 创建CSV文件并写入表头
         self.csv_file_handle = open(cfg.TRAJECTORY_FILE, 'w', newline='')
         self.csv_file = csv.writer(self.csv_file_handle)
         
+        self.csv_file_handle_2 = open(cfg.TRAJECTORY_FILE_2, 'w', newline='')
+        self.csv_file_2 = csv.writer(self.csv_file_handle)
+        
         # 创建表头 [Agent0_x,Agent0_y,Agent0_z,Agent1_x,Agent1_y,Agent1_z,...]
         header = []
+        header_2 = []
         for i in range(len(self.agents)):
             header.extend([f'Agent{i}_x', f'Agent{i}_y', f'Agent{i}_z'])
+            header_2.extend([f'Agent{i}_f', f'Agent{i}_s', f'Agent{i}_h'])
         
         self.csv_file.writerow(header)
+        self.csv_file_2.writerow(header_2)
 
     def _write_positions_to_csv(self):
         """将当前所有智能体的位置写入CSV文件"""
@@ -65,6 +74,17 @@ class Simulator:
             row.extend([agent.pos.x, agent.pos.y, agent.pos.z])
         
         self.csv_file.writerow(row)
+
+    def _write_alphas_to_csv(self):
+        """将当前所有智能体的位置写入CSV文件"""
+        if self.csv_file_2 is None:
+            return
+            
+        row = []
+        for agent in self.agents:
+            row.extend([agent.alpha["f"], agent.alpha["s"], agent.alpha["h"]])
+        
+        self.csv_file_2.writerow(row)
         
     def step(self):
         """Advances the simulation by one timestep."""
@@ -73,7 +93,7 @@ class Simulator:
             for agent in self.agents:
                 agent.compute_neighbors(self.agents)
                 agent.compute_congestion() # 计算自己的拥挤度
-                agent.run_slow_brain(self.agents) # 运行慢脑，估计和预测邻居
+                agent.run_slow_brain(self.dt) # 运行慢脑，估计和预测邻居
 
             # 2. 快脑决策和速度计算
             for agent in self.agents:
@@ -101,9 +121,10 @@ class Simulator:
             
         self.time += self.dt
         
-        # 4. 记录位置到CSV文件
+        # 4. 记录位置和alpha到CSV文件
         if cfg.RECORD_TRAJECTORY:
             self._write_positions_to_csv()
+            # self._write_alphas_to_csv()
         
         # 4. Visualize the new state.
         if cfg.VISUALIZE and self.plot_counter % cfg.PLOT_FREQUENCY == 0:
@@ -161,7 +182,7 @@ class Simulator:
         color_map = {}
         # 用于跟踪已使用的颜色索引
         color_index = 0
-        for i, agent in enumerate(self.agents):
+        for _, agent in enumerate(self.agents):
             if hasattr(agent, 'M'):
                 # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）,惯性矩阵主要通过对角线元素体现不同方向的惯性
                 inertia_feature = agent.M.norm_sq()

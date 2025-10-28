@@ -1,4 +1,4 @@
-import examples.pica_3d.v2.config as cfg
+import enviroments.config as cfg
 from typing import List, Tuple
 from utils.pica_structures import Vector3D, Plane, Line
 import math
@@ -21,7 +21,7 @@ def linear_program1(planes: List[Plane], plane_no: int, line: Line, radius: floa
         numerator = (planes[i].point - line.point).dot(planes[i].normal)
         denominator = line.direction.dot(planes[i].normal)
 
-        if denominator**2 <= cfg.RVO3D_EPSILON:
+        if denominator**2 <= cfg.EPSILON:
             if numerator > 0.0:
                 return False, Vector3D()
             continue
@@ -68,7 +68,7 @@ def linear_program2(planes: List[Plane], plane_no: int, radius: float, opt_veloc
     if direction_opt:
         plane_opt_velocity = opt_velocity - opt_velocity.dot(plane.normal) * plane.normal
         plane_opt_velocity_length_sq = plane_opt_velocity.norm_sq()
-        if plane_opt_velocity_length_sq <= cfg.RVO3D_EPSILON:
+        if plane_opt_velocity_length_sq <= cfg.EPSILON:
             result = plane_center
         else:
             result = plane_center + math.sqrt(plane_radius_sq / plane_opt_velocity_length_sq) * plane_opt_velocity
@@ -82,7 +82,7 @@ def linear_program2(planes: List[Plane], plane_no: int, radius: float, opt_veloc
     for i in range(plane_no):
         if planes[i].normal.dot(planes[i].point - result) > 0.0:
             cross_product = planes[i].normal.cross(plane.normal)
-            if cross_product.norm_sq() <= cfg.RVO3D_EPSILON:
+            if cross_product.norm_sq() <= cfg.EPSILON:
                 return False, Vector3D()
 
             line = Line()
@@ -126,7 +126,7 @@ def linear_program4(planes: List[Plane], begin_plane: int, radius: float, curren
                 plane = Plane()
                 cross_product = planes[j].normal.cross(planes[i].normal)
 
-                if cross_product.norm_sq() <= cfg.RVO3D_EPSILON:
+                if cross_product.norm_sq() <= cfg.EPSILON:
                     if planes[i].normal.dot(planes[j].normal) > 0.0:
                         continue
                     else:

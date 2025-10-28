@@ -1,7 +1,7 @@
 import math
 import random
 from typing import List
-import examples.pica_3d.v2.config as cfg
+from enviroments import config as cfg
 from utils.pica_structures import Vector3D, Plane
 from utils.linear_solver import linear_program3, linear_program4
 
@@ -14,11 +14,11 @@ class OrcaAgent:
         self.goal = goal
         
         # 从 kwargs 获取参数，提供默认值
-        self.radius: float = cfg.AGENT_RADIUS
+        self.radius: float = kwargs.get('radius', cfg.AGENT_RADIUS)
         self.max_speed: float = cfg.MAX_SPEED
-        self.neighbor_dist: float = kwargs.get('neighbor_dist', 15.0)
-        self.time_horizon: float = kwargs.get('time_horizon', 5.0)
-        self.max_neighbors: int = kwargs.get('max_neighbors', 10)
+        self.neighbor_dist: float = kwargs.get('neighbor_dist', cfg.NEIGHBOR_DIST)
+        self.time_horizon: float = kwargs.get('time_horizon', cfg.TIME_HORIZON)
+        self.max_neighbors: int = kwargs.get('max_neighbors', cfg.MAX_NEIGHOBORS)
 
         # 内部状态
         self.is_colliding = False
@@ -38,7 +38,7 @@ class OrcaAgent:
             return
         
         self.vel = self.new_velocity
-        self._break_deadlock()
+        # self._break_deadlock()
         self.pos += self.vel * dt
 
         # 检查是否到达目标
@@ -91,7 +91,7 @@ class OrcaAgent:
         to_goal = self.goal - self.pos
         dist_to_goal = to_goal.norm()
 
-        if dist_to_goal < cfg.RVO3D_EPSILON:
+        if dist_to_goal < cfg.EPSILON:
              self.pref_velocity = Vector3D()
         else:
             # 速度设置为朝向目标，大小不超过 max_speed

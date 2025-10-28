@@ -161,8 +161,8 @@ def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     print(current_dir)
     # file_path = os.path.join(current_dir, '..', 'results', 'test-trajectory'+'.csv')
-    file_path = os.path.join(current_dir, '..', 'results', 'batch', '1', 'plane_scenarios', '2_agents_xy_M_trajectory'+'.csv')
-    # file_path = os.path.join(current_dir, '..', 'results', 'batch', '2', 'pica_scenarios', 'SPHERE_DISCRETE_trajectory'+'.csv')
+    # file_path = os.path.join(current_dir, '..', 'results', 'batch', '1', 'plane_scenarios', '2_agents_xy_M_trajectory'+'.csv')
+    file_path = os.path.join(current_dir, '..', 'results', 'batch', '2', 'SPHERE_DISCRETE_trajectory'+'.csv')
     max_samples = 60  # 最大采样点数，可以根据需要调整
     
     positions = read_and_sample_data(file_path, max_samples)

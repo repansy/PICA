@@ -260,6 +260,9 @@ def batch_analyze_scenarios(input_dir, output_summary):
     df.to_csv(output_summary, index=False)
     print(f"\n汇总结果已保存至: {output_summary}")
 
+def _compare_path_simliarity(path1, path2):
+    ratio = path1/path2
+    return ratio
 
 # 批量运行入口
 if __name__ == "__main__":
