@@ -97,7 +97,7 @@ class OrcaAgent:
             # 速度设置为朝向目标，大小不超过 max_speed
             self.pref_velocity = (to_goal / dist_to_goal) * min(self.max_speed, dist_to_goal)
 
-    def compute_new_velocity(self, dt: float):
+    def compute_new_velocity(self):
         """
         计算新的避障速度。
         这对应 C++ 代码中的 Agent::computeNewVelocity()。
@@ -148,7 +148,7 @@ class OrcaAgent:
                     u = (combined_radius * t - ww_length) * unit_ww
             else:
                 # --- 碰撞情况 (Collision) ---
-                inv_time_step = 1.0 / dt
+                inv_time_step = 1.0 / self.time_horizon
                 w = relative_velocity - inv_time_step * relative_position
                 w_length = w.norm()
                 unit_w = w / w_length

@@ -51,30 +51,24 @@ class Simulator:
         # 创建CSV文件并写入表头
         self.csv_file_handle = open(cfg.TRAJECTORY_FILE, 'w', newline='')
         self.csv_file = csv.writer(self.csv_file_handle)
-        
-        self.csv_file_handle_2 = open(cfg.TRAJECTORY_FILE_2, 'w', newline='')
-        self.csv_file_2 = csv.writer(self.csv_file_handle_2)
 
         self.csv_file_handle_3 = open(cfg.TRAJECTORY_FILE_3, 'w', newline='')
         self.csv_file_3 = csv.writer(self.csv_file_handle_3)
         
         # 创建表头 [Agent0_x,Agent0_y,Agent0_z,Agent1_x,Agent1_y,Agent1_z,...]
         header = []
-        header_2 = []
         header_3 = []
 
         for i in range(len(self.agents)):
             header.extend([f'Agent{i}_x', f'Agent{i}_y', f'Agent{i}_z'])
-            header_2.extend([f'Agent{i}_f', f'Agent{i}_s', f'Agent{i}_h', f'Agent{i}_c'])
             header_3.extend([f'Agent{i}_R', f'Agent{i}_M', f'Agent{i}_P'])
 
         self.csv_file.writerow(header)
-        self.csv_file_2.writerow(header_2)
         self.csv_file_3.writerow(header_3)
 
         row = []
         for agent in self.agents:
-            row.extend([agent.radius, agent.M.norm(), agent.P])
+            row.extend([agent.radius, 1.0, 0.5])
         self.csv_file_3.writerow(row)
 
     def _write_positions_to_csv(self):
@@ -87,49 +81,20 @@ class Simulator:
             row.extend([agent.pos.x, agent.pos.y, agent.pos.z])
         
         self.csv_file.writerow(row)
-
-    def _write_alphas_to_csv(self):
-        """将当前所有智能体的位置写入CSV文件"""
-        if self.csv_file_2 is None:
-            return
-            
-        row = []
-        for other in self.agents:
-            for agent in self.agents:
-                # other包括自己，对于每一行看看agent们对other的责任；然后第二个other以此类推
-                # TODO：对于该记录方法，需要知道本次运行有多少个agent，可依靠（列数//3）查看
-                row.extend([agent.alpha["f"][other.id], agent.alpha["s"][other.id], agent.alpha["h"][other.id], agent.alpha["c"][other.id]])
-            self.csv_file_2.writerow(row)
         
     def step(self):
         """Advances the simulation by one timestep."""
-        if hasattr(self.agents[0], 'M'):
-            # 1. 感知和慢脑决策
-            for agent in self.agents:
-                agent.compute_neighbors(self.agents)
-                agent.compute_congestion() # 计算自己的拥挤度
-                agent.run_slow_brain() # 运行慢脑，估计和预测邻居
+        # 1. Compute all new velocities first.
+        for agent in self.agents:
+            agent.compute_neighbors(self.agents)
+            agent.compute_preferred_velocity()
 
-            # 2. 快脑决策和速度计算
-            for agent in self.agents:
-                agent.compute_preferred_velocity()
-                agent.compute_new_velocity() # 运行快脑，计算最终速度
-
-            # 3. 更新状态
-            for agent in self.agents:
-                agent.update(self.dt) # 应用速度，更新位置，并记录历史
-        else:
-            # 1. Compute all new velocities first.
-            for agent in self.agents:
-                agent.compute_neighbors(self.agents)
-                agent.compute_preferred_velocity()
-
-            for agent in self.agents:
-                agent.compute_new_velocity()
-            
-            # 2. Update all agents' positions simultaneously.
-            for agent in self.agents:
-                agent.update(self.dt)
+        for agent in self.agents:
+            agent.compute_new_velocity()
+        
+        # 2. Update all agents' positions simultaneously.
+        for agent in self.agents:
+            agent.update(self.dt)
             
         # 3. Check for collisions AFTER moving.
         self._check_for_collisions()
@@ -139,7 +104,6 @@ class Simulator:
         # 4. 记录位置和alpha到CSV文件
         if cfg.RECORD_TRAJECTORY:
             self._write_positions_to_csv()
-            self._write_alphas_to_csv()
         
         # 4. Visualize the new state.
         if cfg.VISUALIZE and self.plot_counter % cfg.PLOT_FREQUENCY == 0:

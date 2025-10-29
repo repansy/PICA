@@ -5,8 +5,8 @@ from typing import List,Dict,Any
 from enviroments import config as cfg
 
 from utils.pica_structures import Vector3D
-# from agent.orca_agent import OrcaAgent as Agent
-from agent.pivo_agent import BCOrcaAgent as Agent
+from agent.orca_agent import OrcaAgent as Agent
+# from agent.pivo_agent import BCOrcaAgent as Agent
 
 class HeterogeneousSphereScenario:
     """
@@ -108,24 +108,21 @@ class HeterogeneousSphereScenario:
         return agents
 
 
-# 示例 1: 离散三级场景 (高/中/低)
-print("--- 正在创建离散三级场景 (30% 高, 50% 中, 20% 低) ---")
+# 示例 : 初期test测试
 discrete_groups = [
     {
         'ratio': 0.3, 
-        'params': {'radius': 5.0, 'P': 0.9, 'M': Vector3D(5.0, 5.0, 5.0)}
+        'params': {'radius': 2.0, 'P': 0.7, 'M': Vector3D(3.0, 3.0, 3.0)}
     },
     {
         'ratio': 0.5, 
-        'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}
+        'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}
     },
     {
         'ratio': 0.2, 
         'params': {'radius': 0.5, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}
     },
 ]
-
-# 示例 3: 单一异质性测试 (仅半径不同)
 radius_groups = [
     {
         'ratio': 0.5, 
@@ -136,25 +133,158 @@ radius_groups = [
         'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}
     },
 ]
-
-# 示例 2: 角色扮演场景 (重型 vs 敏捷)
+dynamic_groups = [
+    {
+        'ratio': 0.5, 
+        'params': {'radius': 0.5, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)} 
+    },
+    {
+        'ratio': 0.5, 
+        'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}
+    },
+]
 role_based_groups = [
-    {
-        'ratio': 0.4, 
-        'params': {'radius': 0.8, 'P': 0.8, 'M': Vector3D(5.0, 5.0, 5.0)} # 重型: R大, P高, M大
-    },
-    {
-        'ratio': 0.6, 
-        'params': {'radius': 0.4, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)} # 敏捷: R小, P低, M小
-    },
+    {'ratio': 0.4, 'params': {'radius': 0.8, 'P': 0.8, 'M': Vector3D(2.0, 2.0, 2.0)}},
+    {'ratio': 0.6, 'params': {'radius': 0.4, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
+]
+
+# test ： genelized-test
+
+priority_groups_1 = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+## radius 与 M 有着一定的关系
+radius_groups_1 = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(3.0, 3.0, 3.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+
+role_based_groups_1 = [
+    {'ratio': 0.5, 'params': {'radius': 0.8, 'P': 0.8, 'M': Vector3D(2.0, 2.0, 2.0)} },
+    {'ratio': 0.5, 'params': {'radius': 0.4, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
+]
+# P1: 低权限主导
+P_low_dominant = [
+    {'ratio': 0.7, 'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.3, 'params': {'radius': 0.5, 'P': 0.8, 'M': Vector3D(1.0, 1.0, 1.0)}}
+]
+
+# P2: 高权限主导
+P_high_dominant = [
+    {'ratio': 0.3, 'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.7, 'params': {'radius': 0.5, 'P': 0.8, 'M': Vector3D(1.0, 1.0, 1.0)}}
+]
+
+# P3: 权限均衡分布
+P_balanced = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.8, 'M': Vector3D(1.0, 1.0, 1.0)}}
+]
+
+# P4: 三权限梯度
+P_three_gradient = [
+    {'ratio': 0.3, 'params': {'radius': 0.5, 'P': 0.1, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.4, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.3, 'params': {'radius': 0.5, 'P': 0.9, 'M': Vector3D(1.0, 1.0, 1.0)}}
+]
+
+# P5: 权限极端对比
+P_extreme_contrast = [
+    {'ratio': 0.4, 'params': {'radius': 0.5, 'P': 0.05, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.2, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.4, 'params': {'radius': 0.5, 'P': 0.95, 'M': Vector3D(1.0, 1.0, 1.0)}}
+]
+
+# P6: 权限随机分布
+P_random_distribution = [
+    {'ratio': 0.2, 'params': {'radius': 0.5, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.3, 'params': {'radius': 0.5, 'P': 0.4, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.3, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.2, 'params': {'radius': 0.5, 'P': 0.9, 'M': Vector3D(1.0, 1.0, 1.0)}}
+]
+
+# RM1: 小R小M主导
+RM_small_dominant = [
+    {'ratio': 0.7, 'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
+    {'ratio': 0.3, 'params': {'radius': 1.5, 'P': 0.5, 'M': Vector3D(2.5, 2.5, 2.5)}}
+]
+
+# RM2: 大R大M主导  
+RM_large_dominant = [
+    {'ratio': 0.3, 'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
+    {'ratio': 0.7, 'params': {'radius': 1.5, 'P': 0.5, 'M': Vector3D(2.5, 2.5, 2.5)}}
+]
+
+# RM3: 混合组合1（小R大M vs 大R小M）
+RM_mixed_1 = [
+    {'ratio': 0.5, 'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(2.5, 2.5, 2.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.5, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}}
+]
+
+# RM4: 三组RM组合
+RM_three_group = [
+    {'ratio': 0.3, 'params': {'radius': 0.3, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
+    {'ratio': 0.4, 'params': {'radius': 0.9, 'P': 0.5, 'M': Vector3D(1.5, 1.5, 1.5)}},
+    {'ratio': 0.3, 'params': {'radius': 1.5, 'P': 0.5, 'M': Vector3D(2.5, 2.5, 2.5)}}
+]
+
+# Role1: 双角色基础（重型vs敏捷）
+role_two_basic = [
+    {'ratio': 0.6, 'params': {'radius': 1.2, 'P': 0.3, 'M': Vector3D(2.5, 2.5, 2.5)}},  # 重型
+    {'ratio': 0.4, 'params': {'radius': 0.4, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}}   # 敏捷
+]
+
+# Role2: 双角色比例反转
+role_two_reversed = [
+    {'ratio': 0.4, 'params': {'radius': 1.2, 'P': 0.3, 'M': Vector3D(2.5, 2.5, 2.5)}},  # 重型
+    {'ratio': 0.6, 'params': {'radius': 0.4, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}}   # 敏捷
+]
+
+# Role3: 三角色系统
+role_three_system = [
+    {'ratio': 0.3, 'params': {'radius': 0.3, 'P': 0.8, 'M': Vector3D(0.5, 0.5, 0.5)}},  # 侦察兵
+    {'ratio': 0.5, 'params': {'radius': 0.8, 'P': 0.5, 'M': Vector3D(1.5, 1.5, 1.5)}},   # 标准兵
+    {'ratio': 0.2, 'params': {'radius': 1.5, 'P': 0.2, 'M': Vector3D(3.0, 3.0, 3.0)}}    # 重装兵
+]
+
+# Role4: 三角色比例调整
+role_three_adjusted = [
+    {'ratio': 0.2, 'params': {'radius': 0.3, 'P': 0.8, 'M': Vector3D(0.5, 0.5, 0.5)}},   # 侦察兵
+    {'ratio': 0.3, 'params': {'radius': 0.8, 'P': 0.5, 'M': Vector3D(1.5, 1.5, 1.5)}},   # 标准兵  
+    {'ratio': 0.5, 'params': {'radius': 1.5, 'P': 0.2, 'M': Vector3D(3.0, 3.0, 3.0)}}     # 重装兵
 ]
 
 HeterogeneousSphereScenario_factory = {
     
     # 'SPHERE_DISCRETE': lambda: HeterogeneousSphereScenario(agent_groups=discrete_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    # 'SPHERE_DYNAMIC': lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'SPHERE_INERTIA' : lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # 'SPHERE_DYNAMIC': lambda: HeterogeneousSphereScenario(agent_groups=dynamic_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # 'SPHERE_INERTIA' : lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
     # 'SPHERE_ROLE_BASED': lambda: HeterogeneousSphereScenario(agent_groups=role_based_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-
+    
+    # 基础测试组合
+    'priority_1': lambda: HeterogeneousSphereScenario(agent_groups=priority_groups_1, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'radius_1': lambda: HeterogeneousSphereScenario(agent_groups=radius_groups_1, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'role_based_1': lambda: HeterogeneousSphereScenario(agent_groups=role_based_groups_1, num_agents=cfg.NUM_AGENTS).create_agents(),
+    
+    # P权限消融测试
+    'P_low_dominant': lambda: HeterogeneousSphereScenario(agent_groups=P_low_dominant, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P_high_dominant': lambda: HeterogeneousSphereScenario(agent_groups=P_high_dominant, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P_balanced': lambda: HeterogeneousSphereScenario(agent_groups=P_balanced, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P_three_gradient': lambda: HeterogeneousSphereScenario(agent_groups=P_three_gradient, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P_extreme_contrast': lambda: HeterogeneousSphereScenario(agent_groups=P_extreme_contrast, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P_random_distribution': lambda: HeterogeneousSphereScenario(agent_groups=P_random_distribution, num_agents=cfg.NUM_AGENTS).create_agents(),
+    
+    # RM配合测试
+    'RM_small_dominant': lambda: HeterogeneousSphereScenario(agent_groups=RM_small_dominant, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM_large_dominant': lambda: HeterogeneousSphereScenario(agent_groups=RM_large_dominant, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM_mixed_1': lambda: HeterogeneousSphereScenario(agent_groups=RM_mixed_1, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM_three_group': lambda: HeterogeneousSphereScenario(agent_groups=RM_three_group, num_agents=cfg.NUM_AGENTS).create_agents(),
+    
+    # Role-based测试
+    'role_two_basic': lambda: HeterogeneousSphereScenario(agent_groups=role_two_basic, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'role_two_reversed': lambda: HeterogeneousSphereScenario(agent_groups=role_two_reversed, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'role_three_system': lambda: HeterogeneousSphereScenario(agent_groups=role_three_system, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'role_three_adjusted': lambda: HeterogeneousSphereScenario(agent_groups=role_three_adjusted, num_agents=cfg.NUM_AGENTS).create_agents(),
 }
 

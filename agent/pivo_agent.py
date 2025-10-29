@@ -1,5 +1,6 @@
 import math
 import random
+import numpy as np
 from typing import List, Dict, Any, Tuple
 from collections import deque
 import enviroments.config as cfg
@@ -45,7 +46,10 @@ class BCOrcaAgent:
         self.pref_velocity = Vector3D()
         self.agent_neighbors: List['BCOrcaAgent'] = []
         self.orca_planes: List[Plane] = []
-        self.alpha: Dict = {'f':1,'s':1,'h':1}
+        self.alpha: Dict = {'f': np.zeros(cfg.NUM_AGENTS), 
+                            's': np.zeros(cfg.NUM_AGENTS), 
+                            'h': np.zeros(cfg.NUM_AGENTS), 
+                            'c': np.zeros(cfg.NUM_AGENTS)}
 
     # =================================================================================
     # --- 慢脑 (Slow Brain) 模块 ---
@@ -71,7 +75,7 @@ class BCOrcaAgent:
                 "v_pred": v_pred, "confidence": confidence,
             }
 
-    def optimize_alpha_from_u(self, u, p_est, m_est, alpha_prior, lambda_reg=1.0):
+    def optimize_alpha_from_u(self, u, p_est, m_est, alpha_prior, lambda_max=2.0, lambda_min=0.1, k=1.0):
         """
         基于避障向量u优化责任系数alpha
         参数：
@@ -88,11 +92,26 @@ class BCOrcaAgent:
         """
         # 步骤1：计算避障需求强度s
         s = u.norm()  # u的幅值（避障需求强度）
-        
+
+        lambda_reg = lambda_max * math.exp(-k * s) + lambda_min
         # 步骤2：计算自身和邻居的贡献度
         C_self =  self.P * min([s*self.M.norm(), 1])  # 自身对u的贡献度
         C_other_est = p_est * min([s*m_est.norm(), 1.0])  # 邻居估计贡献度
+
+        # 步骤4：计算目标占比r
+        r = C_self / (C_self + C_other_est + cfg.EPSILON)
         
+        # 步骤5：解析法求最优alpha（结合lambda_reg和边界约束）
+        if lambda_reg < 1.0:
+            alpha_opt = r  # 优先实时贡献比
+        elif lambda_reg > 1.0:
+            alpha_opt = alpha_prior  # 优先先验值
+        else:
+            alpha_opt = (r + alpha_prior) / 2.0  # 平均
+        
+        # 约束在[0, 1]
+        alpha_opt = np.clip(alpha_opt, 0.0, 1.0)
+        '''
         # 步骤3：定义目标函数L(alpha)
         def loss(alpha):
             # 第一项：alpha与自身贡献度占比的偏差
@@ -112,6 +131,8 @@ class BCOrcaAgent:
         )
         
         return result.x[0]  # 优化后的alpha
+        '''
+        return alpha_opt
     
     def _estimate_neighbor_properties(self, other: 'BCOrcaAgent') -> Tuple[float, Vector3D, float]:
         """估计邻居 'other' 的 P, M"""
@@ -204,7 +225,7 @@ class BCOrcaAgent:
         d = d_vec.norm()
         if d < cfg.EPSILON:
             return 0.5
-        d_hat = d_vec /d
+        d_hat = d_vec / d
         v_rel = self.vel - other.vel
         v_rel_norm = v_rel.norm()
         v_radial = v_rel.dot(d_hat) # 计算径向速度 (判断靠近/远离)
@@ -246,20 +267,21 @@ class BCOrcaAgent:
         # 只考虑增加风险的行为
         Delta_self = max(0, tau_self)
         Delta_other = max(0, tau_other)
-        # 4. 计算信息完整性因子
-        density_factor = 1 / (1 + math.exp(-10*(self.rho - 0.5)))  # 密度在0.5处为转折点
+        # 4. 责任分配
+        total_risk = Delta_self + Delta_other
 
-        # 5. 计算责任权重并归一化
-        w_self = Delta_self * (1 - 0.5 * density_factor)
-        w_other = Delta_other * (1 - 0.5 * density_factor)
-        w_total = w_self + w_other
-        if w_total > cfg.EPSILON:
-            alpha_fast = w_other / w_total
+        if total_risk > cfg.EPSILON:
+            # 计算密度因子
+            density_factor = 1 / (1 + math.exp(-10 * (self.rho - 0.5)))
+            # 基于风险贡献的比例
+            risk_based_self = Delta_self / total_risk
+            # 混合责任分配：密度因子控制混合比例
+            gamma_self = (1 - density_factor) * risk_based_self + density_factor * 0.5
         else:
-            alpha_fast = 0.5
-        return alpha_fast
+            gamma_self = 0.5
+        return gamma_self # self占据的风险要素更多，因此做更多的调整
 
-    def compute_new_velocity(self, dt: float):
+    def compute_new_velocity(self):
         """
         快脑主函数：使用慢脑提供的信息，计算最终的避障速度。
         """
@@ -310,7 +332,7 @@ class BCOrcaAgent:
                     plane.normal = unit_ww
                     u = (combined_radius * t - ww_length) * unit_ww
             else:
-                inv_time_step = 1.0 / dt
+                inv_time_step = 1.0 / self.time_horizon
                 w = relative_velocity - inv_time_step * relative_position
                 w_length = w.norm()
                 unit_w = w / w_length
@@ -326,7 +348,13 @@ class BCOrcaAgent:
             
             # 3. 置信度混合
             alpha_hybrid = confidence * alpha_slow + (1.0 - confidence) * alpha_fast
-            print(alpha_hybrid)
+            
+            # 4. 记录数据并应用
+            self.alpha['f'][other.id] = alpha_fast
+            self.alpha['s'][other.id] = alpha_slow
+            self.alpha['h'][other.id] = alpha_hybrid 
+            self.alpha['c'][other.id] = confidence
+
             # 原来的责任是 0.5，现在替换为混合责任
             plane.point = self.vel + alpha_hybrid * u
             

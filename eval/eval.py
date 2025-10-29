@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from enviroments import config as cfg
 from scipy.spatial import distance, cKDTree
 from scipy.stats import variation
 
@@ -14,16 +15,20 @@ JERK_THRESHOLD = 0.1          # 加速度变化阈值
 CONGESTION_DURATION_THRESHOLD = 5  # 最小拥堵持续时间
 
 class AgentMotionAnalyzer:
-    def __init__(self, file_path, dt=0.1):
+    def __init__(self, file_path, static_file_path, dt=cfg.TIME_HORIZON):
         self.df = pd.read_csv(file_path)
+        self.static_df = pd.read_csv(static_file_path)
         self.num_timesteps = len(self.df)
         self.dt = dt
+        
         # 读取 总列数除以3即可
         self.num_agents = int(len(self.df.columns)/3)
         # 校验列数是否为3的倍数（确保数据格式正确）
         if len(self.df.columns) % 3 != 0:
             raise ValueError(f"CSV文件列数({len(self.df.columns)})不是3的倍数，数据格式错误")
+        
         self.positions = self._load_positions()
+        self.static_attributes = self._load_static_attributes()
         
     def _load_positions(self):
         """加载位置数据并重塑为三维数组 (时间步, 智能体, 坐标)"""
@@ -34,40 +39,53 @@ class AgentMotionAnalyzer:
             positions[:, i, 2] = self.df[f'Agent{i}_z']
         return positions
     
+    def _load_static_attributes(self):
+        """加载智能体静态属性：半径R、惯性M、权限P"""
+        static_attrs = np.zeros((self.num_agents, 3))  # [R, M, P]
+        
+        for i in range(self.num_agents):
+            static_attrs[i, 0] = self.static_df[f'Agent{i}_R']  # 半径
+            static_attrs[i, 1] = self.static_df[f'Agent{i}_M']  # 惯性
+            static_attrs[i, 2] = self.static_df[f'Agent{i}_P']  # 权限
+            
+        return static_attrs
+
     def analyze_safety(self):
         """安全性能分析：碰撞检测"""
-        collision_events = 0    
-        max_collision_duration = 0
-        current_collision_duration = np.zeros((self.num_agents, self.num_agents), dtype=int)
-        collision_matrix_prev = np.zeros((self.num_agents, self.num_agents), dtype=bool)
-        
+        collision_events = 0
         for t in range(self.num_timesteps):
             current_pos = self.positions[t]
-            dist_matrix = distance.cdist(current_pos, current_pos, 'euclidean')
-            np.fill_diagonal(dist_matrix, np.inf)
-            
-            # 碰撞检测
-            collision_matrix = dist_matrix < COLLISION_DISTANCE
-            new_collisions = collision_matrix & ~collision_matrix_prev
-            collision_events += np.sum(np.triu(new_collisions))
-            
-            # 碰撞持续时间
-            current_collision_duration[collision_matrix] += 1
-            current_collision_duration[~collision_matrix] = 0
-            max_collision_duration = max(max_collision_duration, np.max(current_collision_duration))
-            
-            collision_matrix_prev = collision_matrix
+            for i in range(self.num_agents):
+                for j in range(i+1, self.num_agents):
+                    # 计算实际距离与半径和
+                    distance_ij = np.linalg.norm(current_pos[i] - current_pos[j])
+                    radius_sum = self.static_attributes[i, 0] + self.static_attributes[j, 0]
+                    
+                    if distance_ij < radius_sum:
+                        collision_events += 1
         
-        return {
-            "total_collisions": int(collision_events),
-            "max_collision_duration": int(max_collision_duration)
-        }
-    
+        return {"total_collisions": collision_events}
+
     def analyze_motion_efficiency(self):
+        
+        """基于惯性的运动分析"""
+        inertia_effects = []
+        for i in range(self.num_agents):
+            inertia = self.static_attributes[i, 1]
+            # 计算加速度变化
+            accelerations = []
+            for t in range(1, self.num_timesteps-1):
+                accel = (self.positions[t+1, i] - 2*self.positions[t, i] + self.positions[t-1, i]) / (self.dt**2)
+                accelerations.append(np.linalg.norm(accel))
+            
+            # 惯性对加速度变化的影响
+            avg_accel = np.mean(accelerations) if accelerations else 0
+            inertia_effect = avg_accel / (inertia + 1e-6)  # 避免除零
+            inertia_effects.append(inertia_effect)
+        
         """运动效率分析：路径优化与流畅度"""
         path_lengths = np.zeros(self.num_agents)
         movement_times = np.zeros(self.num_agents)
-        jerks = []
         
         # 计算路径长度和运动时间
         for t in range(self.num_timesteps - 1):
@@ -76,15 +94,6 @@ class AgentMotionAnalyzer:
             )
             path_lengths += displacements
             movement_times[displacements > MIN_DIST_THRESHOLD] += 1
-        
-        # 计算轨迹平滑度 (jerk)
-        for t in range(1, self.num_timesteps - 2):
-            accel1 = self.positions[t+1] - 2*self.positions[t] + self.positions[t-1]
-            accel2 = self.positions[t+2] - 2*self.positions[t+1] + self.positions[t]
-            # jerk 向量的差值除以 dt^3
-            jerk_vector = (accel2 - accel1) / (self.dt**3)
-            jerk = np.linalg.norm(jerk_vector, axis=1)
-            jerks.extend(jerk[jerk > JERK_THRESHOLD])
         
         # 计算绕行系数
         path_ratios = []
@@ -97,8 +106,8 @@ class AgentMotionAnalyzer:
         
         return {
             "avg_movement_time": np.mean(movement_times),
-            "avg_jerk": np.mean(jerks) if jerks else 0,
-            "avg_path_ratio": np.mean(path_ratios) if path_ratios else 0
+            "avg_path_ratio": np.mean(path_ratios) if path_ratios else 0,
+            "inertia_effects": np.mean(inertia_effects)
         }
     
     def analyze_spatial_behavior(self):
@@ -204,17 +213,15 @@ def simgle_test():
     
     print("\n安全性能:")
     print(f"- 总碰撞次数: {report['safety_performance']['total_collisions']}")
-    print(f"- 最长连续碰撞: {report['safety_performance']['max_collision_duration']}时间步")
     
     print("\n运动效率:")
     print(f"- 平均运动时间: {report['motion_efficiency']['avg_movement_time']:.2f}时间步")
-    print(f"- 轨迹平滑度: {report['motion_efficiency']['avg_jerk']:.4f}")
+    print(f"- 惯性对加速度变化: {report['motion_efficiency']['inertia_effects']:.4f}")
     print(f"- 路径优化率: {report['motion_efficiency']['avg_path_ratio']:.4f}")
     
     print("\n空间行为:")
     print(f"- 平均邻近距离: {report['spatial_behavior']['avg_nn_distance']:.4f}")
     print(f"- 空间分布均匀性: {report['spatial_behavior']['dispersion']:.4f}")
-    print(f"- 平均拥堵时间: {report['spatial_behavior']['avg_congestion_duration_seconds']:.2f}秒")
 
 
 def batch_analyze_scenarios(input_dir, output_summary):
@@ -243,15 +250,13 @@ def batch_analyze_scenarios(input_dir, output_summary):
             "total_time": report["total_time"],
             # 安全性能指标
             "total_collisions": report["safety_performance"]["total_collisions"],
-            "max_collision_duration": report["safety_performance"]["max_collision_duration"],
             # 运动效率指标
             "avg_movement_time": report["motion_efficiency"]["avg_movement_time"],
-            "avg_jerk": report["motion_efficiency"]["avg_jerk"],
+            "avg_jerk": report["motion_efficiency"]["inertia_effects"],
             "avg_path_ratio": report["motion_efficiency"]["avg_path_ratio"],
             # 空间行为指标
             "avg_nn_distance": report["spatial_behavior"]["avg_nn_distance"],
             "dispersion": report["spatial_behavior"]["dispersion"],
-            "avg_congestion_duration_seconds": report["spatial_behavior"]["avg_congestion_duration_seconds"]
         }
         summary_data.append(row)
     
@@ -260,16 +265,12 @@ def batch_analyze_scenarios(input_dir, output_summary):
     df.to_csv(output_summary, index=False)
     print(f"\n汇总结果已保存至: {output_summary}")
 
-def _compare_path_simliarity(path1, path2):
-    ratio = path1/path2
-    return ratio
-
 # 批量运行入口
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 场景CSV存放目录（与batch_run.py的输出目录对应）
     # SPHERE_ROLE_BASED # SPHERE_DYNAMIC # SPHERE_DYNAMIC
-    input_dir = os.path.join(current_dir, "..", "results", "batch\\2\\orca_scenarios")
+    input_dir = os.path.join(current_dir, "..", "results", "batch\\2")
     # 汇总结果输出路径
     output_summary = os.path.join(current_dir, "..", "results\\batch\\2", "summary_results2.csv")
     batch_analyze_scenarios(input_dir, output_summary)

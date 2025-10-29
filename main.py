@@ -2,7 +2,8 @@
 # import enviroments.config as cfg
 import os
 from enviroments import config as cfg
-from simulator.pica_simulator import Simulator
+# from simulator.pica_simulator import Simulator
+from simulator.orca_simulator import Simulator
 from enviroments.scenario import scenario_factory
 from enviroments.scenario_plane import plane_scenario_factory
 from enviroments.scenario_test import HeterogeneousSphereScenario_factory
@@ -98,6 +99,9 @@ def batch_run_hscenarios():
         cfg.SCENARIO = scenario
         # 设置带场景名的CSV输出路径
         cfg.TRAJECTORY_FILE = os.path.join(output_dir, f"{scenario}_trajectory.csv")
+        cfg.TRAJECTORY_FILE_2 = os.path.join(output_dir, f"{scenario}_alpha.csv")
+        cfg.TRAJECTORY_FILE_3 = os.path.join(output_dir, f"{scenario}_RMPsetting.csv")
+
         # 初始化场景智能体
         agents = HeterogeneousSphereScenario_factory[scenario]()
         # 运行仿真
