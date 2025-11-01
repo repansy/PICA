@@ -2,7 +2,7 @@ import numpy as np
 import math
 from typing import List, Tuple
 from utils.pica_structures import Vector3D
-from agent.pica_agent import PicaAgent as Agent
+from agent.pivo_agent import BCOrcaAgent as Agent
 # from examples.pica_3d.v2.pica_agent import Agent
 # from agent.orca_agent import OrcaAgent as Agent
 from examples.pica_3d.v2 import config as cfg
@@ -111,14 +111,15 @@ class PlaneScenario:
                  [np.eye(3)*10 for _ in range(self.num_agents - self.num_agents//2)]
             Ps = [1 for _ in range(self.num_agents//2)] + [100 for _ in range(self.num_agents - self.num_agents//2)]
         
+        params = {'radius': 0.8, 'P': 0.1, 'M': Vector3D(2.0, 2.0, 2.0)}
+
         # 创建智能体
         for i in range(self.num_agents):
             agents.append(Agent(
                 id=i,
                 pos=self.start_positions[i],
                 goal=self.goal_positions[i],
-                inertia_matrix=Ms[i],
-                priority=Ps[i]
+                **params              
             ))
         return agents
 

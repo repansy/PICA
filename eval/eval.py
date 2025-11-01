@@ -1,13 +1,13 @@
 import os
 import numpy as np
 import pandas as pd
-from enviroments import config as cfg
 from scipy.spatial import distance, cKDTree
 from scipy.stats import variation
 
 # 参数配置
 # 时间间隔0.1
 COLLISION_DISTANCE = 1.0      # 碰撞距离阈值 2.0*2
+TIME_HORIZON = 10.0
 CONGESTION_DISTANCE = 15.0
 CONGESTION_DENSITY = 0.005      # 拥堵密度阈值 0.5
 MIN_DIST_THRESHOLD = 0.125     # 有效移动距离阈值 1.0
@@ -15,7 +15,7 @@ JERK_THRESHOLD = 0.1          # 加速度变化阈值
 CONGESTION_DURATION_THRESHOLD = 5  # 最小拥堵持续时间
 
 class AgentMotionAnalyzer:
-    def __init__(self, file_path, static_file_path, dt=cfg.TIME_HORIZON):
+    def __init__(self, file_path, static_file_path, dt=1/TIME_HORIZON):
         self.df = pd.read_csv(file_path)
         self.static_df = pd.read_csv(static_file_path)
         self.num_timesteps = len(self.df)
@@ -60,7 +60,7 @@ class AgentMotionAnalyzer:
                     # 计算实际距离与半径和
                     distance_ij = np.linalg.norm(current_pos[i] - current_pos[j])
                     radius_sum = self.static_attributes[i, 0] + self.static_attributes[j, 0]
-                    
+
                     if distance_ij < radius_sum:
                         collision_events += 1
         
@@ -231,17 +231,19 @@ def batch_analyze_scenarios(input_dir, output_summary):
     output_summary: 汇总结果输出路径
     """
     # 获取所有场景CSV文件
-    csv_files = [f for f in os.listdir(input_dir) if f.endswith("_trajectory.csv")]
+    csv_files_1 = [f for f in os.listdir(input_dir) if f.endswith("_trajectory.csv")]
     summary_data = []
     
-    for file in csv_files:
+    for file in csv_files_1:
         # 提取场景名（从文件名中解析，如"CROSSING_trajectory.csv" -> "CROSSING"）
         scenario = file.replace("_trajectory.csv", "")
+        file_2 = file.replace("_trajectory.csv", "_RMPsetting.csv")
         file_path = os.path.join(input_dir, file)
+        file_path_2 = os.path.join(input_dir, file_2)
         print(f"\n===== 分析场景: {scenario} =====")
         
         # 假设所有场景的智能体数量相同，若不同需根据场景调整
-        analyzer = AgentMotionAnalyzer(file_path)
+        analyzer = AgentMotionAnalyzer(file_path, file_path_2)
         report = analyzer.generate_report()
         
         # 解析报告数据为一行记录
@@ -270,7 +272,7 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 场景CSV存放目录（与batch_run.py的输出目录对应）
     # SPHERE_ROLE_BASED # SPHERE_DYNAMIC # SPHERE_DYNAMIC
-    input_dir = os.path.join(current_dir, "..", "results", "batch\\2")
+    input_dir = os.path.join(current_dir, "..", "results", "batch\\9-fast")
     # 汇总结果输出路径
-    output_summary = os.path.join(current_dir, "..", "results\\batch\\2", "summary_results2.csv")
+    output_summary = os.path.join(current_dir, "..", "results", "summary_results_9.csv")
     batch_analyze_scenarios(input_dir, output_summary)

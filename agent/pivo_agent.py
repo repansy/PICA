@@ -6,7 +6,6 @@ from collections import deque
 import enviroments.config as cfg
 from utils.pica_structures import Vector3D, Plane
 from utils.linear_solver import linear_program3, linear_program4
-from scipy.optimize import minimize
 
 # --- B-ORCA 2.0: 融合快慢脑与在线估计的ORCA实现 ---
 class BCOrcaAgent:
@@ -172,7 +171,10 @@ class BCOrcaAgent:
     def _predict_neighbor_intention(self, other: 'BCOrcaAgent') -> Tuple[Vector3D, float]:
         """使用贝叶斯推断预测邻居的意图速度和置信度"""
         # 1. 定义意图假设
-        v_inertial = other.vel
+        if not other.history or len(other.history) < 2:
+            v_inertial = other.vel / 2
+        else:
+            _, v_inertial, _ = other.history[-1]
         v_goal_oriented = (other.goal - other.pos).normalized() * other.max_speed
 
         # 2. 获取先验概率 (从上一时刻的后验)
@@ -246,17 +248,14 @@ class BCOrcaAgent:
 
         Y_base = v_rel_norm / d
     
-        # 根据运动趋势调整风险
+        # 根据运动趋势调整风险,# 2. 计算反事实风险
         if v_radial < 0:  # 正在靠近
             Y = Y_base * (1 + E)
+            Y_self = other.vel.norm() / d
+            Y_other = self.vel.norm() / d
         else:  # 正在远离
             # 风险衰减系数 (0.5表示风险减半)
             Y = Y_base * (1 - 0.5 * min(E, 1))    
-        # 2. 计算反事实风险
-        if v_radial < 0:  # 靠近时
-            Y_self = other.vel.norm() / d
-            Y_other = self.vel.norm() / d
-        else:  # 远离时
             # 自身停止可能增加风险
             Y_self = Y_base
             Y_other = Y_base
@@ -285,7 +284,12 @@ class BCOrcaAgent:
         """
         快脑主函数：使用慢脑提供的信息，计算最终的避障速度。
         """
+        # 对于不在simulator更新的值，需要刷新
         self.orca_planes.clear()
+        self.alpha={'f': np.zeros(cfg.NUM_AGENTS), 
+                    's': np.zeros(cfg.NUM_AGENTS), 
+                    'h': np.zeros(cfg.NUM_AGENTS), 
+                    'c': np.zeros(cfg.NUM_AGENTS)}
         inv_time_horizon = 1.0 / self.time_horizon
 
         for other in self.agent_neighbors:
@@ -347,12 +351,12 @@ class BCOrcaAgent:
             alpha_slow = self.optimize_alpha_from_u(u, sb_res['p_est'], sb_res['m_est'], 0.5)
             
             # 3. 置信度混合
-            alpha_hybrid = confidence * alpha_slow + (1.0 - confidence) * alpha_fast
+            alpha_hybrid = confidence * alpha_slow + (1-confidence) * alpha_fast
             
             # 4. 记录数据并应用
             self.alpha['f'][other.id] = alpha_fast
             self.alpha['s'][other.id] = alpha_slow
-            self.alpha['h'][other.id] = alpha_hybrid 
+            self.alpha['h'][other.id] = alpha_hybrid
             self.alpha['c'][other.id] = confidence
 
             # 原来的责任是 0.5，现在替换为混合责任
@@ -374,6 +378,10 @@ class BCOrcaAgent:
         """根据 new_velocity 更新智能体的速度和位置，并记录历史"""
         if self.at_goal:
             self.vel = Vector3D()
+            self.alpha={'f': np.zeros(cfg.NUM_AGENTS), 
+                        's': np.zeros(cfg.NUM_AGENTS), 
+                        'h': np.zeros(cfg.NUM_AGENTS), 
+                        'c': np.zeros(cfg.NUM_AGENTS)}
             return
         
         self.vel = self.new_velocity
@@ -392,7 +400,7 @@ class BCOrcaAgent:
         self.rho = 0.0
         for other in self.agent_neighbors:
             dist_sq = (self.pos - other.pos).norm_sq()
-            self.rho += 1.0 / (dist_sq + cfg.EPSILON)
+            self.rho += 10.0 / (dist_sq + cfg.EPSILON)
 
     # --- 以下函数与原始OrcaAgent基本一致 ---
     def compute_neighbors(self, all_agents: List['BCOrcaAgent']):

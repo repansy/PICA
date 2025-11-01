@@ -2,8 +2,8 @@
 # import enviroments.config as cfg
 import os
 from enviroments import config as cfg
-# from simulator.pica_simulator import Simulator
-from simulator.orca_simulator import Simulator
+from simulator.pica_simulator import Simulator
+# from simulator.orca_simulator import Simulator
 from enviroments.scenario import scenario_factory
 from enviroments.scenario_plane import plane_scenario_factory
 from enviroments.scenario_test import HeterogeneousSphereScenario_factory

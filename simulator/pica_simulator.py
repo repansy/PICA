@@ -71,11 +71,13 @@ class Simulator:
         self.csv_file.writerow(header)
         self.csv_file_2.writerow(header_2)
         self.csv_file_3.writerow(header_3)
-
+        '''
         row = []
         for agent in self.agents:
             row.extend([agent.radius, agent.M.norm(), agent.P])
         self.csv_file_3.writerow(row)
+        '''
+
 
     def _write_positions_to_csv(self):
         """将当前所有智能体的位置写入CSV文件"""
@@ -110,10 +112,10 @@ class Simulator:
                 agent.compute_congestion() # 计算自己的拥挤度
                 agent.run_slow_brain() # 运行慢脑，估计和预测邻居
 
-            # 2. 快脑决策和速度计算
+            # 2. 决策和速度计算
             for agent in self.agents:
                 agent.compute_preferred_velocity()
-                agent.compute_new_velocity() # 运行快脑，计算最终速度
+                agent.compute_new_velocity() # 计算最终速度
 
             # 3. 更新状态
             for agent in self.agents:
@@ -139,7 +141,7 @@ class Simulator:
         # 4. 记录位置和alpha到CSV文件
         if cfg.RECORD_TRAJECTORY:
             self._write_positions_to_csv()
-            self._write_alphas_to_csv()
+            # self._write_alphas_to_csv()
         
         # 4. Visualize the new state.
         if cfg.VISUALIZE and self.plot_counter % cfg.PLOT_FREQUENCY == 0:
@@ -198,11 +200,11 @@ class Simulator:
         # 用于跟踪已使用的颜色索引
         color_index = 0
         for _, agent in enumerate(self.agents):
-            if hasattr(agent, 'M'):
+            if hasattr(agent, 'radius'):
                 # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）,惯性矩阵主要通过对角线元素体现不同方向的惯性
-                inertia_feature = agent.M.norm_sq()
+                inertia_feature = agent.radius# agent.M.norm_sq()
                 # 组合优先级和惯性特征作为唯一标识
-                agent_key = (agent.P, inertia_feature)
+                agent_key = (inertia_feature)
             else:
                 # 对于无 inertia_matrix 的 OrcaAgent，使用固定标识
                 agent_key = ("orca",)  # 用元组确保可哈希

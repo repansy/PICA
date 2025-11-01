@@ -4,7 +4,7 @@
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\2'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\batch\\11'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
@@ -13,7 +13,7 @@ TRAJECTORY_FILE_2 = "results/test_alpha.csv"
 TRAJECTORY_FILE_3 = "results/agent_RMP.csv"
 
 # --- 仿真与可视化 ---
-VISUALIZE = False
+VISUALIZE = True
 # 每隔N个时间步更新一次图像，以加速仿真
 PLOT_FREQUENCY = 5
 

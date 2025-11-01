@@ -35,6 +35,9 @@
 
 # TODO : alpha的存储问题[num * 4 * num * time]（完成）
 # TODO : alpha的分析问题->如何将alpha分析，初期confidence奇高，中期会降，后期很高，慢脑偶尔会偏向少避障
+# TOOD : alpha的存储问题还是有,在每一轮计算之后清零，调节alpha_fast（v）,confidence(V)
 
 # TODO : 目前的表现是快慢出现分离现象，快的应该先避障，同时让开时空间给慢速的部分
 # TODO : 只用快脑、只用慢脑；快慢脑的占比作用以及说明
+
+# TODO : 整理数据，
