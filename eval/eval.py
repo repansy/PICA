@@ -6,7 +6,6 @@ from scipy.stats import variation
 
 # 参数配置
 # 时间间隔0.1
-COLLISION_DISTANCE = 1.0      # 碰撞距离阈值 2.0*2
 TIME_HORIZON = 10.0
 CONGESTION_DISTANCE = 15.0
 CONGESTION_DENSITY = 0.005      # 拥堵密度阈值 0.5
@@ -49,22 +48,6 @@ class AgentMotionAnalyzer:
             static_attrs[i, 2] = self.static_df[f'Agent{i}_P']  # 权限
             
         return static_attrs
-
-    def analyze_safety(self):
-        """安全性能分析：碰撞检测"""
-        collision_events = 0
-        for t in range(self.num_timesteps):
-            current_pos = self.positions[t]
-            for i in range(self.num_agents):
-                for j in range(i+1, self.num_agents):
-                    # 计算实际距离与半径和
-                    distance_ij = np.linalg.norm(current_pos[i] - current_pos[j])
-                    radius_sum = self.static_attributes[i, 0] + self.static_attributes[j, 0]
-
-                    if distance_ij < radius_sum:
-                        collision_events += 1
-        
-        return {"total_collisions": collision_events}
 
     def analyze_motion_efficiency(self):
         
@@ -184,12 +167,10 @@ class AgentMotionAnalyzer:
     
     def generate_report(self):
         """生成综合分析报告"""
-        safety = self.analyze_safety()
         efficiency = self.analyze_motion_efficiency()
         spatial = self.analyze_spatial_behavior()
         
         return {
-            "safety_performance": safety,
             "motion_efficiency": efficiency,
             "spatial_behavior": spatial,
             "total_time": self.num_timesteps
@@ -210,9 +191,6 @@ def simgle_test():
     print("群体智能体运动分析报告")
     print("=" * 40)
     print(f"总运行时间: {report['total_time']}时间步")
-    
-    print("\n安全性能:")
-    print(f"- 总碰撞次数: {report['safety_performance']['total_collisions']}")
     
     print("\n运动效率:")
     print(f"- 平均运动时间: {report['motion_efficiency']['avg_movement_time']:.2f}时间步")
@@ -250,8 +228,6 @@ def batch_analyze_scenarios(input_dir, output_summary):
         row = {
             "scenario": scenario,
             "total_time": report["total_time"],
-            # 安全性能指标
-            "total_collisions": report["safety_performance"]["total_collisions"],
             # 运动效率指标
             "avg_movement_time": report["motion_efficiency"]["avg_movement_time"],
             "avg_jerk": report["motion_efficiency"]["inertia_effects"],
@@ -272,7 +248,7 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 场景CSV存放目录（与batch_run.py的输出目录对应）
     # SPHERE_ROLE_BASED # SPHERE_DYNAMIC # SPHERE_DYNAMIC
-    input_dir = os.path.join(current_dir, "..", "results", "batch\\9-fast")
+    input_dir = os.path.join(current_dir, "..", "results", "batch\\8")
     # 汇总结果输出路径
-    output_summary = os.path.join(current_dir, "..", "results", "summary_results_9.csv")
+    output_summary = os.path.join(current_dir, "..", "results", "summary_results_1.csv")
     batch_analyze_scenarios(input_dir, output_summary)

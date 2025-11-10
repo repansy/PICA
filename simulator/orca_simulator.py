@@ -8,6 +8,7 @@ import os
 # Use a generic type hint that works for both Agent and OrcaAgent
 # from examples.pica_3d.v2.pica_agent import Agent as PicaAgent
 from agent.pivo_agent import BCOrcaAgent as PicaAgent
+# from agent.test_agent import TestAgent as OrcaAgent
 from agent.orca_agent import OrcaAgent
 Agent = Union[PicaAgent, OrcaAgent] 
 
@@ -162,7 +163,7 @@ class Simulator:
         # 用于跟踪已使用的颜色索引
         color_index = 0
         for _, agent in enumerate(self.agents):
-            if hasattr(agent, 'M'):
+            if hasattr(agent, 'P'):
                 # 提取惯性矩阵的特征（这里用对角线元素作为能力特征）,惯性矩阵主要通过对角线元素体现不同方向的惯性
                 inertia_feature = agent.M.norm_sq()
                 # 组合优先级和惯性特征作为唯一标识

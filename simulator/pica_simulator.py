@@ -71,12 +71,10 @@ class Simulator:
         self.csv_file.writerow(header)
         self.csv_file_2.writerow(header_2)
         self.csv_file_3.writerow(header_3)
-        '''
         row = []
         for agent in self.agents:
             row.extend([agent.radius, agent.M.norm(), agent.P])
         self.csv_file_3.writerow(row)
-        '''
 
 
     def _write_positions_to_csv(self):
@@ -141,7 +139,7 @@ class Simulator:
         # 4. 记录位置和alpha到CSV文件
         if cfg.RECORD_TRAJECTORY:
             self._write_positions_to_csv()
-            # self._write_alphas_to_csv()
+            self._write_alphas_to_csv()
         
         # 4. Visualize the new state.
         if cfg.VISUALIZE and self.plot_counter % cfg.PLOT_FREQUENCY == 0:

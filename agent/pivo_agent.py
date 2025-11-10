@@ -131,7 +131,7 @@ class BCOrcaAgent:
         
         return result.x[0]  # 优化后的alpha
         '''
-        return alpha_opt
+        return 1 - alpha_opt
     
     def _estimate_neighbor_properties(self, other: 'BCOrcaAgent') -> Tuple[float, Vector3D, float]:
         """估计邻居 'other' 的 P, M"""
