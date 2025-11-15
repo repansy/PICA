@@ -1,5 +1,4 @@
 # main.py
-# import enviroments.config as cfg
 import os
 from enviroments import config as cfg
 from simulator.pica_simulator import Simulator
@@ -94,5 +93,5 @@ def batch_run_c_scenarios():
 if __name__ == "__main__":
     
     # main()
-    # batch_run_c_scenarios()
-    batch_run_s_scenarios()
+    batch_run_c_scenarios()
+    # batch_run_s_scenarios()

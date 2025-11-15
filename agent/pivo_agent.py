@@ -430,9 +430,10 @@ class BCOrcaAgent:
         v_pref = self.vel
         if self.vel.norm_sq() < 0.1 and self.at_goal == False:
             # 随机转动小角度
-            perturb_angle = 0.5 * (random.randint(-90, 90))
+            perturb_angle = 0.05 * (random.randint(-1, 1))
             # perturb_angle = 0
             c, s = math.cos(perturb_angle), math.sin(perturb_angle)
+            print(c, s)
             xp = v_pref.x * c - v_pref.y * s
             yp = v_pref.x * s + v_pref.y * c
             self.vel = Vector3D(xp, yp, v_pref.z)

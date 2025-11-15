@@ -4,7 +4,7 @@
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
 SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\PicaBatch\\1'
+RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\PicaBatch\\circle2'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
