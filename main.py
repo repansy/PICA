@@ -1,11 +1,10 @@
 import time
 import numpy as np
 import os
-from simulator.pica2d_simulator import Simulator  # 2D仿真器
+# from simulator.orca2d_simulator import Simulator  # 2D仿真器
+from simulator.pivo2d_simulator import Simulator
 from enviroments.scenario_2d import scenario_factory_2d
-from enviroments.scenario_plane import plane_scenario_factory
-import examples.pica_2d.v2.config as cfg
-
+import enviroments.config as cfg
 
 def main():
     """2D仿真主函数"""
@@ -39,11 +38,11 @@ def main():
     if cfg.VISUALIZE:
         input("Press Enter to close the plot...")
 
-def batch_run_plane_scenarios():
+def batch_run_2d_scenarios():
     # 所有场景名称（从scenario_factory中获取）
-    scenarios = list(plane_scenario_factory.keys())
+    scenarios = list(scenario_factory_2d.keys())
     # 输出目录（确保存在）
-    output_dir = os.path.join(cfg.RESULT_DIR, "plane_scenarios")
+    output_dir = os.path.join(cfg.RESULT_DIR)
     os.makedirs(output_dir, exist_ok=True)
     
     for scenario in scenarios:
@@ -53,7 +52,7 @@ def batch_run_plane_scenarios():
         # 设置带场景名的CSV输出路径
         cfg.TRAJECTORY_FILE = os.path.join(output_dir, f"{scenario}_trajectory.csv")
         # 初始化场景智能体
-        agents = plane_scenario_factory[scenario]()
+        agents = scenario_factory_2d[scenario]()
         # 运行仿真
         sim = Simulator(agents)
         while sim.time < cfg.SIMULATION_TIME:
@@ -65,4 +64,4 @@ def batch_run_plane_scenarios():
 
 if __name__ == "__main__":
     # main()
-    batch_run_plane_scenarios()
+    batch_run_2d_scenarios()

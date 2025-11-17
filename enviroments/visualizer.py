@@ -271,22 +271,22 @@ def main():
     # 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     print(current_dir)
-    file_path = os.path.join(current_dir, '..', 'results', 'PICA', 'c-20-trajectory-3d'+'.csv')
-    max_samples = 5  # 最大采样点数，可以根据需要调整
+    file_path = os.path.join(current_dir, '..', 'results', 'OrcaBatch','circle2', 'R1_trajectory'+'.csv')
+    max_samples = 60  # 最大采样点数，可以根据需要调整
     
     positions = read_and_sample_data(file_path, max_samples)
     
     # 生成3D轨迹图
-    plot_3d_trajectories(positions)
+    # plot_3d_trajectories(positions)
     
     # 生成2D轨迹图（XY平面）
     plot_2d_trajectories(positions, plane='xy')
     
     # 生成2D轨迹图（XZ平面）
-    plot_2d_trajectories(positions, plane='xz')
+    # plot_2d_trajectories(positions, plane='xz')
     
     # 生成2D轨迹图（YZ平面）
-    plot_2d_trajectories(positions, plane='yz')
+    # plot_2d_trajectories(positions, plane='yz')
 
 if __name__ == "__main__":
     main()

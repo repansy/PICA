@@ -22,10 +22,10 @@ class Vector2D:
         if n < 1e-9:
             return Vector2D(0, 0)
         return Vector2D(self.x / n, self.y / n)
-
-    def dot(self, other: 'Vector2D') -> float:
-        """点积计算"""
-        return self.x * other.x + self.y * other.y
+    
+    def det(self, b):
+        """计算两个向量的叉积（标量结果）"""
+        return self.x * b.y - self.y * b.x
     
     # Unary negation (-vector)
     def __neg__(self):
@@ -48,6 +48,9 @@ class Vector2D:
     def __mul__(self, scalar: float) -> 'Vector2D':
         return Vector2D(self.x * scalar, self.y * scalar)
 
+    def __matmul__(self, other):
+        return self.x * other.x + self.y * other.y
+    
     @classmethod
     def from_numpy(cls, arr: list) -> 'Vector2D':
         """从numpy数组转换（适配优化器输出）"""
@@ -56,3 +59,11 @@ class Vector2D:
     def to_numpy(self):
         """转换为 numpy 数组用于矩阵运算"""
         return np.array([self.x, self.y])
+    
+    def is_zero(self): return self.norm_sq() < 1e-12
+    
+class Line:
+    """线结构体，包含点和方向向量"""
+    def __init__(self, point=Vector2D(), direction=Vector2D()):
+        self.point = point
+        self.direction = direction

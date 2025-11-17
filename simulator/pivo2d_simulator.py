@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 import csv
 import os
 from typing import List, Set, Tuple, Optional
-from examples.pica_2d.v2.pica2d_agent import Agent
-import examples.pica_2d.v2.config as cfg
-
+from agent.pivo_agent import BCOrcaAgent as Agent
+from enviroments import config as cfg 
+    
 class Simulator:
     def __init__(self, agents: List[Agent]):
         self.agents = agents
         self.time = 0.0
-        self.dt = cfg.TIMESTEP
+        self.dt = cfg.TIME_STEP
         self.plot_counter = 0
 
         # 碰撞跟踪（2D平面碰撞）
@@ -48,14 +48,18 @@ class Simulator:
         self.csv_file.writerow(row)
 
     def step(self):
-        """2D仿真步骤（移除Z轴物理更新）"""
-        # 1. 计算新速度
-        new_velocities = {agent.id: agent.compute_new_velocity(self.agents, self.dt) 
-                          for agent in self.agents}
-        
-        # 2. 更新位置（仅X、Y方向）
+        """Advances the simulation by one timestep."""
+        # 1. Compute all new velocities first.
         for agent in self.agents:
-            agent.update(new_velocities[agent.id], self.dt)
+            agent.compute_neighbors(self.agents)
+            agent.compute_congestion() # 计算自己的拥挤度
+            agent.run_slow_brain() # 运行慢脑，估计和预测邻居
+            agent.compute_preferred_velocity()
+            agent.compute_new_velocity(self.dt)
+        
+        # 2. Update all agents' positions simultaneously.
+        for agent in self.agents:
+            agent.update(self.dt)
         
         # 3. 2D碰撞检测（平面距离）
         self._check_for_collisions()

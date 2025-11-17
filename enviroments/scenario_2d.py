@@ -1,63 +1,474 @@
 import numpy as np
 import math
-from typing import List
-from utils.pica2d_structures import Vector2D  # 假设存在2D向量类
-from examples.pica_2d.v2.pica2d_agent import Agent  # 2D智能体类
-from examples.pica_2d.v2 import config as cfg
+from typing import List, Dict, Any
+from utils.pica2d_structures import Vector2D 
+# from agent.orca_agent import OrcaAgent as Agent
+from agent.pivo_agent import BCOrcaAgent as Agent
+from enviroments import config as cfg
 
 
-class DiskScenario:
-    """2D圆形平面场景（对应3D球体的赤道投影）"""
-    def __init__(self):
-        self.center = Vector2D(
-            cfg.WORLD_SIZE[0] / 2,  # 2D世界宽度
-            cfg.WORLD_SIZE[1] / 2   # 2D世界高度
-        )
-        self.radius = min(self.center.x, self.center.y) * 0.8  # 圆形区域半径
+class CircleScenario:
+    """
+    一个高度可配置的圆形对跖点场景，专为测试异质性智能体设计。
+    """
+    def __init__(
+        self,
+        agent_groups: List[Dict[str, Any]],
+        num_agents: int = cfg.NUM_AGENTS,
+        world_size: tuple = cfg.WORLD_SIZE,
+        seed: int = 43
+    ):
+        """
+        初始化场景。
 
-    def _generate_equidistant_points(self) -> List[Vector2D]:
-        """生成圆上均匀分布的点（用于对跖点场景）"""
+        Args:
+            agent_groups (List[Dict[str, Any]]): 
+                一个定义异质智能体组的列表。每个字典代表一个组，包含：
+                - 'ratio' (float): 该组智能体占总数的比例。
+                - 'params' (Dict): 该组智能体的属性，如 'radius', 'P', 'M'。
+            num_agents (int): 场景中的智能体总数。
+            world_size (tuple): 仿真世界的大小 (x, y, z)。
+            seed (int): 用于控制随机性的种子。
+        """
+        self.num_agents = num_agents
+        self.world_size = world_size
+        self.seed = seed
+        self.agent_groups = agent_groups
+        np.random.seed(self.seed)
+
+        # 检查比例总和是否为1
+        total_ratio = sum(group['ratio'] for group in self.agent_groups)
+        if not math.isclose(total_ratio, 1.0):
+            raise ValueError(f"所有智能体组的比例总和必须为1，当前为: {total_ratio}")
+
+        # 计算场景中心和球体半径
+        self.center = Vector2D(world_size[0] / 2, world_size[1] / 2)
+        self.radius = min(self.center.x, self.center.y) * 0.8
+
+        # 生成均匀分布在球面上的点
+        self.sphere_points = self._generate_fibonacci_lattice_points()
+
+    def _generate_fibonacci_lattice_points(self) -> List[Vector2D]:
         points = []
-        for i in range(cfg.NUM_AGENTS):
-            theta = 2 * math.pi * i / cfg.NUM_AGENTS  # 均匀角度分布
-            x = self.radius * math.cos(theta)
-            y = self.radius * math.sin(theta)
+        for i in range(self.num_agents):
+            # 角度均匀分布（0到2π）
+            theta = 2 * math.pi * i / self.num_agents
+            # 单位圆上的点
+            x = math.cos(theta)
+            y = math.sin(theta)
             points.append(Vector2D(x, y))
+        
+        # 随机打乱点的顺序，确保分组均匀分布
+        np.random.shuffle(points)
         return points
 
     def create_agents(self) -> List[Agent]:
-        """创建2D智能体，起点和目标为对跖点（圆心对称）"""
+        """
+        根据 agent_groups 的定义创建并返回智能体列表。
+        """
         agents = []
-        points = self._generate_equidistant_points()
+        current_agent_idx = 0
+
+        for group_info in self.agent_groups:
+            ratio = group_info['ratio']
+            params = group_info['params']
+            num_in_group = int(round(self.num_agents * ratio))
+
+            # 处理最后一个组，确保总数正确
+            if group_info == self.agent_groups[-1]:
+                num_in_group = self.num_agents - len(agents)
+
+            for _ in range(num_in_group):
+                if current_agent_idx >= self.num_agents:
+                    break
+                
+                # 获取起点和终点
+                start_vec = self.sphere_points[current_agent_idx]
+                start_pos = self.center + start_vec * self.radius
+                goal_pos = self.center - start_vec * self.radius
+
+                # 创建智能体实例，传入特定参数
+                agent = Agent(
+                    id=current_agent_idx,
+                    pos=start_pos,
+                    goal=goal_pos,
+                    **params  # 将字典中的所有参数解包传入
+                )
+                agents.append(agent)
+                current_agent_idx += 1
         
-        for i in range(cfg.NUM_AGENTS):
-            # 起点：圆上某点
-            start_pos = self.center + points[i]
-            # 目标点：对跖点（圆心对称点）
-            goal_pos = self.center - points[i]
-            
-            # 2D惯性矩阵（仅XY方向）
-            if i % 2 == 0:
-                # 低惯性（灵活）
-                inertia = np.diag([1.0, 1.0])
-                priority = 1.0
-            else:
-                # 高惯性（笨重）
-                inertia = np.diag([5.0, 5.0])
-                priority = 3.0
-            
-            agents.append(Agent(
-                id=i,
-                pos=start_pos,
-                goal=goal_pos,
-                inertia_matrix=inertia,
-                priority=priority
-            ))
         return agents
 
 
+from utils.pica2d_structures import Vector2D
+
+# test ： genelized-test
+
+# 通用测试
+
+test_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+R1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+R2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+R3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+R4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+R5_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+## PIVO专属测试
+P1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.4, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.6, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.2, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.8, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.1, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.9, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P5_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.2, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P6_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.4, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P7_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.6, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P8_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.8, 'M': Vector2D(1.0, 1.0)}},
+]
+
+
+M1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+M2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+M3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+M4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+]
+
+M5_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+# 混合参数比较场景1，扭转测试，简单单调测试，PM的baseline，R为1.0，P为0.5，M为0.5/2.0
+PM1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(2.0, 2.0)}},
+]
+
+PM2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(2.0, 2.0)}},
+]
+
+PM3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.8, 'M': Vector2D(2.0, 2.0)}},
+]
+
+PM4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.2, 'M': Vector2D(2.0, 2.0)}},
+]
+
+## 扭转测试，RP的baseline, R为1.0，P为0.3/0.7, M为1.0
+RP1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RP2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RP3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RP4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RP5_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RP6_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+]
+
+## 同质的不用测，扭转测试，baseline为M系列
+RM1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RM2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+RM3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+RM4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+]
+
+RM5_groups = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+RM6_groups = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+# 混合参数比较场景2
+
+RPM1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector2D(0.5, 0.5)}},
+]
+
+RPM2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.8, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.2, 'M': Vector2D(0.5, 0.5)}}
+]
+
+RP10_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.2, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.9, 'M': Vector2D(1.0, 1.0)}}
+]
+
+# 比例掺杂场景 baseline：0.3混合比例，R为1.0，P为0.5，V为1.0
+P9_groups = [
+    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.34, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector2D(1.0, 1.0)}}
+]
+
+# 单调测试
+
+P10_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.1, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.2, 'M': Vector2D(1.0, 1.0)}},
+]
+
+P11_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.4, 'M': Vector2D(1.0, 1.0)}},
+]
+# P12 与P7一致，属于重复的
+P12_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.6, 'M': Vector2D(1.0, 1.0)}},
+]
+
+# RPM测试
+RPM3_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.1, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.2, 'M': Vector2D(2.0, 2.0)}},
+]
+
+RPM4_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.4, 'M': Vector2D(1.0, 1.0)}},
+]
+
+# 比例分配测试
+M_groups = [
+    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.34, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(2.0, 2.0)}},
+]
+
+R_groups = [
+    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.34, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}}
+]
+
+RPM5_groups = [
+    {'ratio': 0.33, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector2D(2.0, 2.0)}},
+    {'ratio': 0.67, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector2D(0.5, 0.5)}},
+]
+
+RPM6_groups = [
+    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector2D(0.5, 0.5)}},
+    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector2D(1.0, 1.0)}},
+    {'ratio': 0.34, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector2D(2.0, 2.0)}},
+]
+
 # 2D场景工厂
 scenario_factory_2d = {
-    'DISK_ANTIPODAL': lambda: DiskScenario().create_agents(),  # 对跖点圆形场景
-    # 'DISK_RANDOM': lambda: DiskScenario().create_random_agents()  # 可扩展随机场景
+    'baseline': lambda: CircleScenario(agent_groups=test_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'R1': lambda: CircleScenario(agent_groups=R1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'R2': lambda: CircleScenario(agent_groups=R2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'R3': lambda: CircleScenario(agent_groups=R3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'R4': lambda: CircleScenario(agent_groups=R4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'R5': lambda: CircleScenario(agent_groups=R5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P1': lambda: CircleScenario(agent_groups=P1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P2': lambda: CircleScenario(agent_groups=P2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P3': lambda: CircleScenario(agent_groups=P3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P4': lambda: CircleScenario(agent_groups=P4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P5': lambda: CircleScenario(agent_groups=P5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P6': lambda: CircleScenario(agent_groups=P6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P7': lambda: CircleScenario(agent_groups=P7_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P8': lambda: CircleScenario(agent_groups=P8_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M1': lambda: CircleScenario(agent_groups=M1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M2': lambda: CircleScenario(agent_groups=M2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M3': lambda: CircleScenario(agent_groups=M3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M4': lambda: CircleScenario(agent_groups=M4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M5': lambda: CircleScenario(agent_groups=M5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM1': lambda: CircleScenario(agent_groups=PM1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM2': lambda: CircleScenario(agent_groups=PM2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM3': lambda: CircleScenario(agent_groups=PM3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM4': lambda: CircleScenario(agent_groups=PM4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP1': lambda: CircleScenario(agent_groups=RP1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP2': lambda: CircleScenario(agent_groups=RP2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP3': lambda: CircleScenario(agent_groups=RP3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP4': lambda: CircleScenario(agent_groups=RP4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP5': lambda: CircleScenario(agent_groups=RP5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP6': lambda: CircleScenario(agent_groups=RP6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM1': lambda: CircleScenario(agent_groups=RM1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM2': lambda: CircleScenario(agent_groups=RM2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM3': lambda: CircleScenario(agent_groups=RM3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM4': lambda: CircleScenario(agent_groups=RM4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM5': lambda: CircleScenario(agent_groups=RM5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM6': lambda: CircleScenario(agent_groups=RM6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM1': lambda: CircleScenario(agent_groups=RPM1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM2': lambda: CircleScenario(agent_groups=RPM2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P9': lambda: CircleScenario(agent_groups=P9_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP10': lambda: CircleScenario(agent_groups=RP10_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    
+    # P系列场景（固定半径和惯性，测试权限梯度）
+    'P10': lambda: CircleScenario(agent_groups=P10_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P11': lambda: CircleScenario(agent_groups=P11_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # 'P12': lambda: CircleScenario(agent_groups=P12_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+
+    # RPM系列场景（多参数组合测试）
+    'RPM3': lambda: CircleScenario(agent_groups=RPM3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM4': lambda: CircleScenario(agent_groups=RPM4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM5': lambda: CircleScenario(agent_groups=RPM5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM6': lambda: CircleScenario(agent_groups=RPM6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+
+    # 比例分配测试场景（固定其他参数，测试单一参数梯度与比例影响）
+    'M': lambda: CircleScenario(agent_groups=M_groups, num_agents=cfg.NUM_AGENTS).create_agents(),  # 惯性梯度+比例分配
+    'R': lambda: CircleScenario(agent_groups=R_groups, num_agents=cfg.NUM_AGENTS).create_agents()    # 半径梯度+比例分配
+
 }
+
+'''
+
+    'P1': lambda: CircleScenario(agent_groups=P1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P2': lambda: CircleScenario(agent_groups=P2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P3': lambda: CircleScenario(agent_groups=P3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P4': lambda: CircleScenario(agent_groups=P4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P5': lambda: CircleScenario(agent_groups=P5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P6': lambda: CircleScenario(agent_groups=P6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P7': lambda: CircleScenario(agent_groups=P7_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P8': lambda: CircleScenario(agent_groups=P8_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M1': lambda: CircleScenario(agent_groups=M1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M2': lambda: CircleScenario(agent_groups=M2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M3': lambda: CircleScenario(agent_groups=M3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M4': lambda: CircleScenario(agent_groups=M4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'M5': lambda: CircleScenario(agent_groups=M5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM1': lambda: CircleScenario(agent_groups=PM1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM2': lambda: CircleScenario(agent_groups=PM2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM3': lambda: CircleScenario(agent_groups=PM3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'PM4': lambda: CircleScenario(agent_groups=PM4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP1': lambda: CircleScenario(agent_groups=RP1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP2': lambda: CircleScenario(agent_groups=RP2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP3': lambda: CircleScenario(agent_groups=RP3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP4': lambda: CircleScenario(agent_groups=RP4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP5': lambda: CircleScenario(agent_groups=RP5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP6': lambda: CircleScenario(agent_groups=RP6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM1': lambda: CircleScenario(agent_groups=RM1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM2': lambda: CircleScenario(agent_groups=RM2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM3': lambda: CircleScenario(agent_groups=RM3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM4': lambda: CircleScenario(agent_groups=RM4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM5': lambda: CircleScenario(agent_groups=RM5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RM6': lambda: CircleScenario(agent_groups=RM6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM1': lambda: CircleScenario(agent_groups=RPM1_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM2': lambda: CircleScenario(agent_groups=RPM2_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P9': lambda: CircleScenario(agent_groups=P9_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RP10': lambda: CircleScenario(agent_groups=RP10_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    # P系列场景（固定半径和惯性，测试权限梯度）
+    'P10': lambda: CircleScenario(agent_groups=P10_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P11': lambda: CircleScenario(agent_groups=P11_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'P12': lambda: CircleScenario(agent_groups=P12_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+
+    # RPM系列场景（多参数组合测试）
+    'RPM3': lambda: CircleScenario(agent_groups=RPM3_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM4': lambda: CircleScenario(agent_groups=RPM4_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM5': lambda: CircleScenario(agent_groups=RPM5_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'RPM6': lambda: CircleScenario(agent_groups=RPM6_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+
+    # 比例分配测试场景（固定其他参数，测试单一参数梯度与比例影响）
+    'M': lambda: CircleScenario(agent_groups=M_groups, num_agents=cfg.NUM_AGENTS).create_agents(),  # 惯性梯度+比例分配
+    'R': lambda: CircleScenario(agent_groups=R_groups, num_agents=cfg.NUM_AGENTS).create_agents()    # 半径梯度+比例分配
+
+'''
