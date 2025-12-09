@@ -259,3 +259,45 @@ RPM6_groups = [
     {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
     {'ratio': 0.34, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
 ]
+
+
+_RM_37basleine1_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+
+_RM_37basleine2_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+
+_RM1_37_groups = [
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+
+
+_RM2_37_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+
+_RM3_37_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}},
+]
+
+_RM4_37_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+]
+
+_RM5_37_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
+]
+
+_RM6_37_groups = [
+    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
+    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
+]

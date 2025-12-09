@@ -93,11 +93,10 @@ class Simulator:
         if self.csv_file_2 is None:
             return
             
-        row = []
         for other in self.agents:
+            row = []
             for agent in self.agents:
                 # other包括自己，对于每一行看看agent们对other的责任；然后第二个other以此类推
-                # TODO：对于该记录方法，需要知道本次运行有多少个agent，可依靠（列数//3）查看
                 row.extend([agent.alpha["f"][other.id], agent.alpha["s"][other.id], agent.alpha["h"][other.id], agent.alpha["c"][other.id]])
             self.csv_file_2.writerow(row)
         

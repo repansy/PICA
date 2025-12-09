@@ -94,4 +94,4 @@ if __name__ == "__main__":
     
     # main()
     batch_run_c_scenarios()
-    # batch_run_s_scenarios()
+    batch_run_s_scenarios()

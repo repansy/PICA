@@ -160,7 +160,7 @@ def main():
     # 获取当前脚本所在目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
     print(current_dir)
-    file_path = os.path.join(current_dir, '..', 'results', 'batch\\10\\plane_scenarios', '8_agents_xy_M_trajectory'+'.csv')
+    file_path = os.path.join(current_dir, '..', 'results', 'OrcaBatch\\spheretest', 'Baseline_trajectory'+'.csv')
     max_samples = 60  # 最大采样点数，可以根据需要调整
     
     positions = read_and_sample_data(file_path, max_samples)
