@@ -100,7 +100,8 @@ def extract_nonzero_nums_and_plot_histogram(csv_path, bins=30, save_fig_path=Non
 # ------------------- 使用示例 -------------------
 if __name__ == "__main__":
     # 请替换为你的CSV文件路径
-    csv_file_path = "F:\\CodeRepo\\PICA\\results\\PicaBatch\\spheretest\\RA1_37_alpha.csv"
+    csv_file_path = "G:\\CodeRepo\\PICA\\results\\test_alpha.csv" # "G:\\CodeRepo\\PICA\\results\\PicaBatch\\sP3_alpha.csv"
+    
     
     # 调用函数（可根据需要调整参数）
     result = extract_nonzero_nums_and_plot_histogram(

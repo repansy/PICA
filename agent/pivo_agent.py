@@ -7,7 +7,6 @@ import enviroments.config as cfg
 from utils.pica_structures import Vector3D, Plane
 from utils.linear_solver import linear_program3, linear_program4
 
-# --- B-ORCA 2.0: 融合快慢脑与在线估计的ORCA实现 ---
 class BCOrcaAgent:
     def __init__(self, id: int, pos: Vector3D, goal: Vector3D, **kwargs):
         # --- 基础属性 (同原始ORCA) ---
@@ -17,7 +16,7 @@ class BCOrcaAgent:
         self.goal = goal
 
         self.radius: float = kwargs.get('radius', cfg.AGENT_RADIUS)
-        self.max_speed: float = cfg.MAX_SPEED
+        self.max_speed: float = cfg.MAX_SPEED 
         self.neighbor_dist: float = kwargs.get('neighbor_dist', cfg.NEIGHBOR_DIST)
         self.time_horizon: float = kwargs.get('time_horizon', cfg.TIME_HORIZON)
         self.max_neighbors: int = kwargs.get('max_neighbors', cfg.MAX_NEIGHOBORS)
@@ -60,6 +59,7 @@ class BCOrcaAgent:
         在计算新速度之前，为每个智能体调用一次。
         """
         self.slow_brain_results.clear()
+        self.compute_congestion()  # 计算自身的拥挤程度 rho
 
         for other in self.agent_neighbors:
             # 1. 在线估计邻居的属性

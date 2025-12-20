@@ -8,7 +8,9 @@ import os
 # Use a generic type hint that works for both Agent and OrcaAgent
 # from examples.pica_3d.v2.pica_agent import Agent as PicaAgent
 from agent.pivo_agent import BCOrcaAgent as PicaAgent
-from agent.orca_agent import OrcaAgent
+# from agent.test_agent import BCOrcaAgent as PicaAgent
+# from agent.orca_agent import OrcaAgent
+from agent.avocado import AvocadoAgent as OrcaAgent
 Agent = Union[PicaAgent, OrcaAgent] 
 
 # Here is the important cfg
@@ -72,9 +74,11 @@ class Simulator:
         self.csv_file_2.writerow(header_2)
         self.csv_file_3.writerow(header_3)
         row = []
+        '''
         for agent in self.agents:
             row.extend([agent.radius, agent.M.norm(), agent.P])
         self.csv_file_3.writerow(row)
+        '''
 
 
     def _write_positions_to_csv(self):
@@ -106,7 +110,6 @@ class Simulator:
             # 1. 感知和慢脑决策
             for agent in self.agents:
                 agent.compute_neighbors(self.agents)
-                agent.compute_congestion() # 计算自己的拥挤度
                 agent.run_slow_brain() # 运行慢脑，估计和预测邻居
 
             # 2. 决策和速度计算
@@ -118,18 +121,15 @@ class Simulator:
             for agent in self.agents:
                 agent.update(self.dt) # 应用速度，更新位置，并记录历史
         else:
-            # 1. Compute all new velocities first.
             for agent in self.agents:
-                agent.compute_neighbors(self.agents)
                 agent.compute_preferred_velocity()
-
+                agent.compute_neighbors(self.agents)
             for agent in self.agents:
-                agent.compute_new_velocity()
-            
-            # 2. Update all agents' positions simultaneously.
+                # agent.compute_alphas()       # 计算注意力
+                agent.compute_new_velocity() # 计算速度
             for agent in self.agents:
-                agent.update(self.dt)
-            
+                agent.update(self.dt)             # 更新位置
+                    
         # 3. Check for collisions AFTER moving.
         self._check_for_collisions()
             
@@ -138,7 +138,7 @@ class Simulator:
         # 4. 记录位置和alpha到CSV文件
         if cfg.RECORD_TRAJECTORY:
             self._write_positions_to_csv()
-            self._write_alphas_to_csv()
+            # self._write_alphas_to_csv()
         
         # 4. Visualize the new state.
         if cfg.VISUALIZE and self.plot_counter % cfg.PLOT_FREQUENCY == 0:

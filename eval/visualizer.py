@@ -297,20 +297,20 @@ def main():
     # try:
     # 初始化可视化工具
     visualizer = AgentVisualizer(
-        pos_file='F:\\CodeRepo\\PICA\\results\\PicaBatch\\circle\\R1_trajectory.csv',
-        static_file='F:\\CodeRepo\\PICA\\results\\PicaBatch\\circle\\R1_RMPsetting.csv',
-        max_samples=20
+        pos_file='G:\\CodeRepo\\PICA\\results\\PicaBatch\\sbaseline\\sBaseline_trajectory.csv',
+        static_file='G:\\CodeRepo\\PICA\\results\\PicaBatch\\sbaseline\\sBaseline_RMPsetting.csv',
+        max_samples=60
     )
     
     # 生成可视化结果
     print("绘制3D轨迹图...")
-    visualizer.plot_3d_trajectories(attribute=choices[0], show_spheres=True)
+    visualizer.plot_3d_trajectories(attribute=choices[1], show_spheres=True)
     
     print("绘制2D轨迹图（XY平面）...")
-    visualizer.plot_2d_trajectories(plane='xy', attribute=choices[0])
+    visualizer.plot_2d_trajectories(plane='xy', attribute=choices[1])
     
     print("绘制2D轨迹图（XZ平面）...")
-    visualizer.plot_2d_trajectories(plane='xz', attribute=choices[0])
+    visualizer.plot_2d_trajectories(plane='xz', attribute=choices[1])
         
     # except Exception as e:
     #     print(f"可视化失败: {str(e)}", file=sys.stderr)

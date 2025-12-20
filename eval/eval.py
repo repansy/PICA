@@ -6,7 +6,7 @@ from scipy.stats import variation
 
 # 参数配置
 # 时间间隔0.1
-TIME_HORIZON = 10.0
+COLLISION_DISTANCE = 2.0      # 碰撞距离阈值 2.0*2
 CONGESTION_DISTANCE = 15.0
 CONGESTION_DENSITY = 0.005      # 拥堵密度阈值 0.5
 MIN_DIST_THRESHOLD = 0.125     # 有效移动距离阈值 1.0
@@ -14,20 +14,16 @@ JERK_THRESHOLD = 0.1          # 加速度变化阈值
 CONGESTION_DURATION_THRESHOLD = 5  # 最小拥堵持续时间
 
 class AgentMotionAnalyzer:
-    def __init__(self, file_path, static_file_path, dt=1/TIME_HORIZON):
+    def __init__(self, file_path, dt=0.1):
         self.df = pd.read_csv(file_path)
-        self.static_df = pd.read_csv(static_file_path)
         self.num_timesteps = len(self.df)
         self.dt = dt
-        
         # 读取 总列数除以3即可
         self.num_agents = int(len(self.df.columns)/3)
         # 校验列数是否为3的倍数（确保数据格式正确）
         if len(self.df.columns) % 3 != 0:
             raise ValueError(f"CSV文件列数({len(self.df.columns)})不是3的倍数，数据格式错误")
-        
         self.positions = self._load_positions()
-        self.static_attributes = self._load_static_attributes()
         
     def _load_positions(self):
         """加载位置数据并重塑为三维数组 (时间步, 智能体, 坐标)"""
@@ -38,37 +34,40 @@ class AgentMotionAnalyzer:
             positions[:, i, 2] = self.df[f'Agent{i}_z']
         return positions
     
-    def _load_static_attributes(self):
-        """加载智能体静态属性：半径R、惯性M、权限P"""
-        static_attrs = np.zeros((self.num_agents, 3))  # [R, M, P]
+    def analyze_safety(self):
+        """安全性能分析：碰撞检测"""
+        collision_events = 0    
+        max_collision_duration = 0
+        current_collision_duration = np.zeros((self.num_agents, self.num_agents), dtype=int)
+        collision_matrix_prev = np.zeros((self.num_agents, self.num_agents), dtype=bool)
         
-        for i in range(self.num_agents):
-            static_attrs[i, 0] = self.static_df[f'Agent{i}_R']  # 半径
-            static_attrs[i, 1] = self.static_df[f'Agent{i}_M']  # 惯性
-            static_attrs[i, 2] = self.static_df[f'Agent{i}_P']  # 权限
+        for t in range(self.num_timesteps):
+            current_pos = self.positions[t]
+            dist_matrix = distance.cdist(current_pos, current_pos, 'euclidean')
+            np.fill_diagonal(dist_matrix, np.inf)
             
-        return static_attrs
-
+            # 碰撞检测
+            collision_matrix = dist_matrix < COLLISION_DISTANCE
+            new_collisions = collision_matrix & ~collision_matrix_prev
+            collision_events += np.sum(np.triu(new_collisions))
+            
+            # 碰撞持续时间
+            current_collision_duration[collision_matrix] += 1
+            current_collision_duration[~collision_matrix] = 0
+            max_collision_duration = max(max_collision_duration, np.max(current_collision_duration))
+            
+            collision_matrix_prev = collision_matrix
+        
+        return {
+            "total_collisions": int(collision_events),
+            "max_collision_duration": int(max_collision_duration)
+        }
+    
     def analyze_motion_efficiency(self):
-        
-        """基于惯性的运动分析"""
-        inertia_effects = []
-        for i in range(self.num_agents):
-            inertia = self.static_attributes[i, 1]
-            # 计算加速度变化
-            accelerations = []
-            for t in range(1, self.num_timesteps-1):
-                accel = (self.positions[t+1, i] - 2*self.positions[t, i] + self.positions[t-1, i]) / (self.dt**2)
-                accelerations.append(np.linalg.norm(accel))
-            
-            # 惯性对加速度变化的影响
-            avg_accel = np.mean(accelerations) if accelerations else 0
-            inertia_effect = avg_accel / (inertia + 1e-6)  # 避免除零
-            inertia_effects.append(inertia_effect)
-        
         """运动效率分析：路径优化与流畅度"""
         path_lengths = np.zeros(self.num_agents)
         movement_times = np.zeros(self.num_agents)
+        jerks = []
         
         # 计算路径长度和运动时间
         for t in range(self.num_timesteps - 1):
@@ -77,6 +76,15 @@ class AgentMotionAnalyzer:
             )
             path_lengths += displacements
             movement_times[displacements > MIN_DIST_THRESHOLD] += 1
+        
+        # 计算轨迹平滑度 (jerk)
+        for t in range(1, self.num_timesteps - 2):
+            accel1 = self.positions[t+1] - 2*self.positions[t] + self.positions[t-1]
+            accel2 = self.positions[t+2] - 2*self.positions[t+1] + self.positions[t]
+            # jerk 向量的差值除以 dt^3
+            jerk_vector = (accel2 - accel1) / (self.dt**3)
+            jerk = np.linalg.norm(jerk_vector, axis=1)
+            jerks.extend(jerk[jerk > JERK_THRESHOLD])
         
         # 计算绕行系数
         path_ratios = []
@@ -89,8 +97,8 @@ class AgentMotionAnalyzer:
         
         return {
             "avg_movement_time": np.mean(movement_times),
-            "avg_path_ratio": np.mean(path_ratios) if path_ratios else 0,
-            "inertia_effects": np.mean(inertia_effects)
+            "avg_jerk": np.mean(jerks) if jerks else 0,
+            "avg_path_ratio": np.mean(path_ratios) if path_ratios else 0
         }
     
     def analyze_spatial_behavior(self):
@@ -167,10 +175,12 @@ class AgentMotionAnalyzer:
     
     def generate_report(self):
         """生成综合分析报告"""
+        safety = self.analyze_safety()
         efficiency = self.analyze_motion_efficiency()
         spatial = self.analyze_spatial_behavior()
         
         return {
+            "safety_performance": safety,
             "motion_efficiency": efficiency,
             "spatial_behavior": spatial,
             "total_time": self.num_timesteps
@@ -192,14 +202,19 @@ def simgle_test():
     print("=" * 40)
     print(f"总运行时间: {report['total_time']}时间步")
     
+    print("\n安全性能:")
+    print(f"- 总碰撞次数: {report['safety_performance']['total_collisions']}")
+    print(f"- 最长连续碰撞: {report['safety_performance']['max_collision_duration']}时间步")
+    
     print("\n运动效率:")
     print(f"- 平均运动时间: {report['motion_efficiency']['avg_movement_time']:.2f}时间步")
-    print(f"- 惯性对加速度变化: {report['motion_efficiency']['inertia_effects']:.4f}")
+    print(f"- 轨迹平滑度: {report['motion_efficiency']['avg_jerk']:.4f}")
     print(f"- 路径优化率: {report['motion_efficiency']['avg_path_ratio']:.4f}")
     
     print("\n空间行为:")
     print(f"- 平均邻近距离: {report['spatial_behavior']['avg_nn_distance']:.4f}")
     print(f"- 空间分布均匀性: {report['spatial_behavior']['dispersion']:.4f}")
+    print(f"- 平均拥堵时间: {report['spatial_behavior']['avg_congestion_duration_seconds']:.2f}秒")
 
 
 def batch_analyze_scenarios(input_dir, output_summary):
@@ -209,32 +224,27 @@ def batch_analyze_scenarios(input_dir, output_summary):
     output_summary: 汇总结果输出路径
     """
     # 获取所有场景CSV文件
-    csv_files_1 = [f for f in os.listdir(input_dir) if f.endswith("_trajectory.csv")]
+    csv_files = [f for f in os.listdir(input_dir) if f.endswith("_trajectory.csv")]
     summary_data = []
     
-    for file in csv_files_1:
+    for file in csv_files:
         # 提取场景名（从文件名中解析，如"CROSSING_trajectory.csv" -> "CROSSING"）
         scenario = file.replace("_trajectory.csv", "")
-        file_2 = file.replace("_trajectory.csv", "_RMPsetting.csv")
         file_path = os.path.join(input_dir, file)
-        file_path_2 = os.path.join(input_dir, file_2)
         print(f"\n===== 分析场景: {scenario} =====")
         
         # 假设所有场景的智能体数量相同，若不同需根据场景调整
-        analyzer = AgentMotionAnalyzer(file_path, file_path_2)
+        analyzer = AgentMotionAnalyzer(file_path)
         report = analyzer.generate_report()
         
         # 解析报告数据为一行记录
         row = {
             "scenario": scenario,
             "total_time": report["total_time"],
+            # 安全性能指标
+            "total_collisions": report["safety_performance"]["total_collisions"],
             # 运动效率指标
-            "avg_movement_time": report["motion_efficiency"]["avg_movement_time"],
-            "avg_jerk": report["motion_efficiency"]["inertia_effects"],
             "avg_path_ratio": report["motion_efficiency"]["avg_path_ratio"],
-            # 空间行为指标
-            "avg_nn_distance": report["spatial_behavior"]["avg_nn_distance"],
-            "dispersion": report["spatial_behavior"]["dispersion"],
         }
         summary_data.append(row)
     
@@ -243,12 +253,15 @@ def batch_analyze_scenarios(input_dir, output_summary):
     df.to_csv(output_summary, index=False)
     print(f"\n汇总结果已保存至: {output_summary}")
 
+
 # 批量运行入口
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # 场景CSV存放目录（与batch_run.py的输出目录对应）
     # SPHERE_ROLE_BASED # SPHERE_DYNAMIC # SPHERE_DYNAMIC
-    input_dir = os.path.join(current_dir, "..", "results", "OrcaBatch\\cspff")
+    # for i in range(0,10):
+    i="2"
+    input_dir = os.path.join(current_dir, "..", "results", "PicaBatch{}".format(i))
     # 汇总结果输出路径
-    output_summary = os.path.join(current_dir, "..", "results", "summary_results_csp.csv")
+    output_summary = os.path.join(current_dir, "..", "results\\PicaBatch{}\summary_results.csv".format(i))
     batch_analyze_scenarios(input_dir, output_summary)

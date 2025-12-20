@@ -3,14 +3,14 @@
 # --- Simulation Scenario ---
 # 'antipodal_sphere': Agents start on a sphere and travel to the opposite point.
 # 'random': Agents start at random positions with random goals.
-SCENARIO =  'SPHERE_DISCRETE'
-RESULT_DIR = 'F:\\CodeRepo\\PICA\\results\\OrcaBatch\\cspff'
+SCENARIO =  'sP4'  
+RESULT_DIR = 'G:\\CodeRepo\\PICA\\results\\PicaBatch4'
 # 是否记录轨迹到CSV文件
 RECORD_TRAJECTORY = True
 # CSV文件保存路径
 TRAJECTORY_FILE = "results/test_trajectory.csv"
 TRAJECTORY_FILE_2 = "results/test_alpha.csv"
-TRAJECTORY_FILE_3 = "results/agent_RMP.csv"
+TRAJECTORY_FILE_3 = "results/test_RMP.csv"
 
 # --- 仿真与可视化 ---
 VISUALIZE = False
@@ -26,6 +26,7 @@ WORLD_SIZE = (100, 100, 100) # meters (x, y, z)
 ACCELERATION_MAX = 2.0
 NEIGHBOR_DIST = 15.0
 TIME_HORIZON = 10.0
+TIME_STEP = 10.0
 MAX_NEIGHOBORS = 10
 
 # --- B-ORCA 2.0 核心配置 ---
@@ -41,4 +42,13 @@ HISTORY_LEN = 10           # 存储历史轨迹的长度，用于估计邻居属
 
 # 数值稳定性
 EPSILON = 1e-6             # 用于避免除零等计算问题的微小正数
+# --- 密度感知 (Dual-Mode) ---
+BETA_MIN = 0.0             # 最低置信度
 
+# --- 意图与交互 ---
+P_SMOOTH = 0.8             # 意图平滑因子 (越接近1越相信历史)
+
+# --- 慢脑优化权重 ---
+W_PREF = 1.0               # 目标驱动权重
+W_INERTIA = 2.0            # 惯性权重 (防抖动)
+W_SLACK = 1000.0           # 基础安全约束惩罚

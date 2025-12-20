@@ -6,8 +6,9 @@ from enviroments import config as cfg
 
 from utils.pica_structures import Vector3D
 # from agent.orca_agent import OrcaAgent as Agent
-# from agent.test_agent import TestAgent as Agent
+# from agent.test_agent import BCOrcaAgent as Agent
 from agent.pivo_agent import BCOrcaAgent as Agent
+# from agent.avocado import AvocadoAgent as Agent
 
 class SphereScenario:
     """
@@ -27,7 +28,7 @@ class SphereScenario:
             agent_groups (List[Dict[str, Any]]): 
                 一个定义异质智能体组的列表。每个字典代表一个组，包含：
                 - 'ratio' (float): 该组智能体占总数的比例。
-                - 'params' (Dict): 该组智能体的属性，如 'radius', 'P', 'M'。
+                - 'params' (Dict): 该F组智能体的属性，如 'radius', 'P', 'M'。
             num_agents (int): 场景中的智能体总数。
             world_size (tuple): 仿真世界的大小 (x, y, z)。
             seed (int): 用于控制随机性的种子。
@@ -219,126 +220,20 @@ role_based_groups = [
     {'ratio': 0.6, 'params': {'radius': 0.4, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
 ]
 
-# 单调测试
-
-P10_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.15, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.85, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-P11_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.35, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.65, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-P12_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.45, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.55, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-# RPM测试
-RPM3_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.1, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.2, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-RPM4_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.4, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-# 比例分配测试
-M_groups = [
-    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.34, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-R_groups = [
-    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.34, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}}
-]
-
-RPM5_groups = [
-    {'ratio': 0.33, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.67, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-RPM6_groups = [
-    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.34, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-# 权限下不同37比例的影响
-_RM7_37_groups = [
-    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.67, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_RM8_37_groups = [
-    {'ratio': 0.67, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_RM9_37_groups = [
-    {'ratio': 0.33, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.67, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-_RM10_37_groups = [
-    {'ratio': 0.67, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-_RM11_37_groups = [
-    {'ratio': 0.67, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-_RM12_37_groups = [
-    {'ratio': 0.67, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.33, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-_ra1_37_groups = [
-    {'ratio': 0.4, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.6, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_ra2_37_groups = [
-    {'ratio': 0.2, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.8, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_ra3_37_groups = [
-    {'ratio': 0.1, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.9, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_ra4_37_groups = [
-    {'ratio': 0.9, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.1, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_ra5_37_groups = [
-    {'ratio': 0.8, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.2, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_ra6_37_groups = [
-    {'ratio': 0.6, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.4, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
 SphereScenario_factory = {
     # 'SPHERE_DISCRETE': lambda: HeterogeneousSphereScenario(agent_groups=discrete_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
     # 'SPHERE_DYNAMIC': lambda: HeterogeneousSphereScenario(agent_groups=dynamic_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
     # 'SPHERE_INERTIA' : lambda: HeterogeneousSphereScenario(agent_groups=radius_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
     # 'SPHERE_ROLE_BASED': lambda: HeterogeneousSphereScenario(agent_groups=role_based_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    # 'sBaseline': lambda: SphereScenario(agent_groups=test_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'sP10': lambda: SphereScenario(agent_groups=P10_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'sP11': lambda: SphereScenario(agent_groups=P11_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'sP12': lambda: SphereScenario(agent_groups=P12_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    
+    'sBaseline': lambda seed=42: SphereScenario(agent_groups=test_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP1': lambda seed=42: SphereScenario(agent_groups=P1_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP2': lambda seed=42: SphereScenario(agent_groups=P2_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP3': lambda seed=42: SphereScenario(agent_groups=P3_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP4': lambda seed=42: SphereScenario(agent_groups=P4_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP10': lambda seed=42: SphereScenario(agent_groups=P10_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP11': lambda seed=42: SphereScenario(agent_groups=P11_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP12': lambda seed=42: SphereScenario(agent_groups=P12_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'sP13': lambda seed=42: SphereScenario(agent_groups=P13_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
 }
 
 
@@ -347,33 +242,6 @@ test_groups = [
     {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
 ]
 
-R1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-R2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-R3_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-R4_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-R5_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-
-## PIVO专属测试
 P1_groups = [
     {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.4, 'M': Vector3D(1.0, 1.0, 1.0)}},
     {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.6, 'M': Vector3D(1.0, 1.0, 1.0)}},
@@ -414,132 +282,6 @@ P8_groups = [
     {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.8, 'M': Vector3D(1.0, 1.0, 1.0)}},
 ]
 
-
-M1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-M2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-M3_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-M4_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-M5_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-# 混合参数比较场景1，扭转测试，简单单调测试，PM的baseline，R为1.0，P为0.5，M为0.5/2.0
-PM1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-PM2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-PM3_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.8, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-PM4_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.2, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-## 扭转测试，RP的baseline, R为1.0，P为0.3/0.7, M为1.0
-RP1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RP2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RP3_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RP4_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RP5_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RP6_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-## 同质的不用测，扭转测试，baseline为M系列
-RM1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RM2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-RM3_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-RM4_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-RM5_groups = [
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-RM6_groups = [
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.5, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.5, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-# 混合参数比较场景2
-
-RPM1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-RPM2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.8, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.2, 'M': Vector3D(0.5, 0.5, 0.5)}}
-]
-
-RP10_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.2, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.9, 'M': Vector3D(1.0, 1.0, 1.0)}}
-]
-
 # 比例掺杂场景 baseline：0.3混合比例，R为1.0，P为0.5，V为1.0
 P9_groups = [
     {'ratio': 0.33, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
@@ -547,55 +289,36 @@ P9_groups = [
     {'ratio': 0.34, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}}
 ]
 
-# 权限区分
-
-_RM_37baseline1_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
+P10_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.15, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.85, 'M': Vector3D(1.0, 1.0, 1.0)}},
 ]
 
-_RM_37baseline2_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+P11_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.25, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.75, 'M': Vector3D(1.0, 1.0, 1.0)}},
 ]
 
-_RM1_37_groups = [
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+P12_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.35, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.65, 'M': Vector3D(1.0, 1.0, 1.0)}},
 ]
 
-_RM2_37_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
+P13_groups = [
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.45, 'M': Vector3D(1.0, 1.0, 1.0)}},
+    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.55, 'M': Vector3D(1.0, 1.0, 1.0)}},
 ]
-
-_RM3_37_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(2.0, 2.0, 2.0)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(0.5, 0.5, 0.5)}},
-]
-
-_RM4_37_groups = [
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(1.0, 1.0, 1.0)}},
-]
-
-_RM5_37_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(1.0, 1.0, 1.0)}},
-    {'ratio': 0.5, 'params': {'radius': 1.0, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-_RM6_37_groups = [
-    {'ratio': 0.5, 'params': {'radius': 2.0, 'P': 0.3, 'M': Vector3D(0.5, 0.5, 0.5)}},
-    {'ratio': 0.5, 'params': {'radius': 0.5, 'P': 0.7, 'M': Vector3D(2.0, 2.0, 2.0)}},
-]
-
-
 
 CircleScenario_factory = {
-    # 'cBaseline': lambda: CircleScenario(agent_groups=test_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'cP10': lambda: CircleScenario(agent_groups=P10_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'cP11': lambda: CircleScenario(agent_groups=P11_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
-    'cP12': lambda: CircleScenario(agent_groups=P12_groups, num_agents=cfg.NUM_AGENTS).create_agents(),
+    'cBaseline': lambda seed=42: CircleScenario(agent_groups=test_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP1': lambda seed=42: CircleScenario(agent_groups=P1_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP2': lambda seed=42: CircleScenario(agent_groups=P2_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP3': lambda seed=42: CircleScenario(agent_groups=P3_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP4': lambda seed=42: CircleScenario(agent_groups=P4_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP10': lambda seed=42: CircleScenario(agent_groups=P10_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP11': lambda seed=42: CircleScenario(agent_groups=P11_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP12': lambda seed=42: CircleScenario(agent_groups=P12_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
+    'cP13': lambda seed=42: CircleScenario(agent_groups=P13_groups, num_agents=cfg.NUM_AGENTS, seed=seed).create_agents(),
 }
 
 '''
